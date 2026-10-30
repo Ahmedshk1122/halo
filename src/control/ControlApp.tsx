@@ -2,6 +2,8 @@ import { Database, FileText, Play, Radio, Settings } from "lucide-react";
 import { useEffect, type ReactNode } from "react";
 import { useStore } from "./createStore";
 import { Inspector } from "./Inspector";
+import { restore, startPersisting } from "./persist";
+import { DataSection } from "./sections/DataSection";
 import { LiveSection } from "./sections/LiveSection";
 import { SettingsSection } from "./sections/SettingsSection";
 import { startStageSync } from "./stageSync";
@@ -29,6 +31,8 @@ export function ControlApp() {
   useEffect(() => {
     document.title = "Halo";
     document.body.classList.add("is-control");
+    restore();
+    startPersisting();
     startStageSync();
   }, []);
 
@@ -76,7 +80,7 @@ export function ControlApp() {
         </header>
         <div className="ctl-center">
           {section === "live" && <LiveSection />}
-          {section === "data" && <Empty title="Data">Coming in milestone 2.</Empty>}
+          {section === "data" && <DataSection />}
           {section === "notes" && <Empty title="Talk notes">Coming in milestone 4.</Empty>}
           {section === "rehearsal" && <Empty title="Rehearsal">Coming in milestone 3.</Empty>}
           {section === "settings" && <SettingsSection />}

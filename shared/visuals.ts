@@ -114,6 +114,8 @@ export interface MetricSpec extends SpecBase {
   baseline: ScalarRef;
   /** Sparkline. Empty table for none. */
   trend: SeriesRef;
+  /** Which way is good for this metric (churn: down). Colors the delta. */
+  good_direction: "up" | "down";
 }
 
 export interface LineSpec extends SpecBase {

@@ -43,27 +43,27 @@ export const BODY_LINE = 35; // 28px body line height
 export function templateSize(v: ResolvedVisual): Size {
   switch (v.template) {
     case "metric":
-      return { w: 560, h: v.trend && v.trend.points.length > 1 ? 440 : 330 };
+      return { w: 560, h: (v.delta ? 0 : -50) + (v.trend && v.trend.points.length > 1 ? 470 : 360) };
     case "line":
       return { w: 640, h: 460 };
     case "bar":
       return { w: 640, h: 460 };
     case "funnel":
-      return { w: 640, h: 148 + v.steps.points.length * 96 };
+      return { w: 640, h: PAD * 2 + TITLE_LINE + (v.subtitle ? 31 : 0) + 22 + v.steps.points.length * 82 - 16 };
     case "comparison": {
       const rows = Math.max(v.a.points.length, v.b.points.length);
       const hasValue = !!(v.a.value || v.b.value);
       return { w: 1120, h: 150 + (hasValue ? 116 : 0) + rows * 46 + 24 };
     }
     case "strategy": {
-      const textW = 600 - PAD * 2 - 72 - 20;
-      let h = PAD + TITLE_LINE + 20;
+      const textW = 600 - PAD * 2 - 64 - 22;
+      let h = PAD + TITLE_LINE + 26;
       for (const p of v.points) {
         const lines = estimateLines(p.text, 28, textW);
         const detailLines = p.detail ? estimateLines(p.detail, 24, textW) : 0;
-        h += Math.max(72, lines * BODY_LINE + detailLines * 31 + 4) + 20;
+        h += Math.max(64, lines * BODY_LINE + detailLines * 30 + 4) + 22;
       }
-      return { w: 600, h: h - 20 + PAD };
+      return { w: 600, h: h - 22 + PAD };
     }
     case "roadmap":
       return { w: Math.min(1400, 260 * Math.max(3, v.items.length) + 120), h: 330 };

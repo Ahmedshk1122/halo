@@ -17,3 +17,154 @@
   max-width: 1012px;
   text-wrap: balance;
 }
+
+/* Shared template scaffolding */
+.tpl {
+  box-sizing: border-box;
+  height: 100%;
+  padding: 36px;
+  display: flex;
+  flex-direction: column;
+}
+.tpl-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 20px;
+}
+.tpl-head .t-title {
+  text-wrap: balance;
+}
+
+/* SVG text roles (sizes at 1080p, never below 22px) */
+.svg-label {
+  font: 500 24px var(--font-system);
+  fill: var(--label-2);
+  font-variant-numeric: tabular-nums;
+}
+.svg-value {
+  font: 600 30px var(--font-system);
+  fill: var(--accent-text);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+.svg-axis {
+  font: 500 22px var(--font-system);
+  fill: var(--label-3);
+}
+.tpl-chart {
+  display: block;
+  overflow: visible;
+}
+
+/* Metric card */
+.tpl-metric .tpl-head {
+  margin-bottom: 10px;
+}
+.tpl-metric-hero {
+  margin-left: -6px; /* optical alignment of large figures */
+}
+.tpl-metric-delta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+  font-size: var(--type-body);
+  font-weight: 500;
+  line-height: 1.2;
+}
+.tpl-metric-delta-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--accent-text);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.tpl-metric-spark {
+  margin-top: auto;
+}
+
+/* Funnel */
+.tpl-funnel-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.tpl-funnel-step {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-radius: 14px;
+}
+.tpl-funnel-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  height: 36px;
+}
+.tpl-funnel-label {
+  white-space: nowrap;
+}
+.tpl-funnel-drop {
+  font-size: var(--type-min);
+  font-weight: 600;
+  color: var(--label-2);
+  font-variant-numeric: tabular-nums;
+}
+.tpl-funnel-value {
+  margin-left: auto;
+}
+.tpl-funnel-track {
+  height: 20px;
+  border-radius: 10px;
+  background: var(--fill-2);
+  overflow: hidden;
+}
+.tpl-funnel-bar {
+  height: 100%;
+  border-radius: 10px;
+  background: var(--accent);
+}
+.tpl-funnel-step.is-highlight .tpl-funnel-bar {
+  background: var(--orange);
+}
+.tpl-funnel-step.is-highlight .tpl-funnel-drop {
+  color: var(--orange-text);
+}
+.tpl-funnel-step.is-highlight .tpl-funnel-label {
+  font-weight: 600;
+}
+
+/* Strategy card */
+.tpl-strategy-points {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+.tpl-strategy-point {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  min-height: 64px;
+  border-radius: 18px;
+}
+.tpl-icon-tile {
+  flex: none;
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+.tpl-strategy-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}

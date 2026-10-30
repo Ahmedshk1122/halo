@@ -45,6 +45,7 @@
   --separator: rgba(60, 60, 67, 0.16);
   --grid: rgba(60, 60, 67, 0.12);
   --highlight-inset: rgba(255, 255, 255, 0.55);
+  --glass-bg-solid: #ffffff;
   /* Colored text on light glass is deepened slightly so it survives video compression. */
   --blue-text: color-mix(in srgb, var(--blue) 82%, black);
   --green-text: color-mix(in srgb, var(--green) 72%, black);
@@ -78,6 +79,7 @@
   --separator: rgba(84, 84, 88, 0.55);
   --grid: rgba(235, 235, 245, 0.12);
   --highlight-inset: rgba(255, 255, 255, 0.12);
+  --glass-bg-solid: #2c2c2e;
   --blue-text: var(--blue);
   --green-text: var(--green);
   --red-text: var(--red);

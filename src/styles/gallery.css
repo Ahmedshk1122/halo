@@ -1,0 +1,177 @@
+/* /gallery dev route chrome (not part of the stage design). */
+body.is-gallery {
+  margin: 0;
+  background: #161618;
+  color: rgba(255, 255, 255, 0.86);
+  font: 13px/1.4 -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+}
+.gallery-bar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 20px;
+  background: rgba(22, 22, 24, 0.82);
+  backdrop-filter: blur(20px);
+  border-bottom: 0.5px solid rgba(255, 255, 255, 0.1);
+}
+.gallery-bar label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: rgba(255, 255, 255, 0.6);
+}
+.gallery-bar select,
+.gallery-bar button,
+.gallery-reveal button {
+  background: rgba(255, 255, 255, 0.1);
+  color: inherit;
+  border: 0;
+  border-radius: 6px;
+  padding: 3px 9px;
+  font: inherit;
+}
+.gallery-sep {
+  width: 0.5px;
+  height: 18px;
+  background: rgba(255, 255, 255, 0.15);
+}
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(560px, 1fr));
+  gap: 22px;
+  padding: 22px;
+}
+.gallery-grid.is-focus {
+  grid-template-columns: 1fr;
+}
+.gallery-tile {
+  margin: 0;
+}
+.gallery-stage {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #000;
+  cursor: zoom-in;
+}
+.is-focus .gallery-stage {
+  cursor: default;
+}
+.gallery-stage .stage-viewport {
+  position: absolute;
+  inset: 0;
+}
+.gallery-tile figcaption {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 2px 0;
+}
+.gallery-meta {
+  color: rgba(255, 255, 255, 0.45);
+}
+.gallery-reveal {
+  margin-left: auto;
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  color: rgba(255, 255, 255, 0.6);
+}
+.gallery-error {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  color: #ff453a;
+  text-align: center;
+}
+
+/* Stand-in camera feed */
+.gallery-backdrop {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  filter: blur(3px);
+  background: linear-gradient(180deg, #c9bfb2 0%, #b3a796 60%, #9d917f 100%);
+}
+.gallery-backdrop.is-dusk {
+  background: linear-gradient(180deg, #3a3d46 0%, #2b2d33 60%, #1e1f23 100%);
+}
+.gb-window {
+  position: absolute;
+  left: 110px;
+  top: 120px;
+  width: 520px;
+  height: 640px;
+  border-radius: 6px;
+  background: linear-gradient(160deg, #eef2f5, #d9e2ea);
+  box-shadow: 0 0 120px 30px rgba(255, 255, 255, 0.35);
+}
+.is-dusk .gb-window {
+  background: linear-gradient(160deg, #4a5a78, #2f3a52);
+  box-shadow: 0 0 120px 30px rgba(80, 110, 160, 0.25);
+}
+.gb-shelf {
+  position: absolute;
+  right: 120px;
+  top: 300px;
+  width: 520px;
+  height: 26px;
+  background: #6f5444;
+}
+.gb-plant {
+  position: absolute;
+  right: 170px;
+  top: 150px;
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 40%, #6f9b72, #3f6a48);
+}
+.gb-person {
+  position: absolute;
+  inset: 0;
+}
+.gb-hair {
+  position: absolute;
+  left: 790px;
+  top: 170px;
+  width: 340px;
+  height: 230px;
+  border-radius: 50%;
+  background: #3a2a1f;
+}
+.gb-face {
+  position: absolute;
+  left: 810px;
+  top: 230px;
+  width: 300px;
+  height: 390px;
+  border-radius: 48% 48% 46% 46%;
+  background: #c99a7c;
+}
+.gb-neck {
+  position: absolute;
+  left: 900px;
+  top: 580px;
+  width: 120px;
+  height: 140px;
+  background: #b98a6d;
+}
+.gb-body {
+  position: absolute;
+  left: 600px;
+  top: 690px;
+  width: 720px;
+  height: 600px;
+  border-radius: 48% 48% 0 0;
+  background: #27354a;
+}
+.is-dusk .gb-face { background: #8e6c58; }
+.is-dusk .gb-neck { background: #7f5e4c; }
+.is-dusk .gb-body { background: #1a2230; }

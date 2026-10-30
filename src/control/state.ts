@@ -1,6 +1,7 @@
 // All Halo state lives here, in the control window. The stage window only
 // renders the StageState derived from it.
 
+import type { DataTable } from "../../shared/data";
 import type { Rect } from "../../shared/geometry";
 import type { Slot } from "../../shared/layout";
 import type { GlassTheme } from "../../shared/stage";
@@ -54,6 +55,8 @@ export interface ControlState {
   reducedMotion: boolean;
   keepOut: Rect | null;
   stage: StageLink;
+  /** Loaded data. The only source of numbers on screen. */
+  tables: DataTable[];
 }
 
 export const store = createStore<ControlState>({
@@ -67,4 +70,5 @@ export const store = createStore<ControlState>({
   reducedMotion: false,
   keepOut: null,
   stage: { connected: false, camera: "unknown", size: null, lastHello: 0 },
+  tables: [],
 });

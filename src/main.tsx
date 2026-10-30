@@ -4,6 +4,7 @@ import "./styles/tokens.css";
 import "./styles/stage.css";
 import "./styles/templates.css";
 import "./styles/control.css";
+import "./styles/gallery.css";
 import { ControlApp } from "./control/ControlApp";
 import { StageApp } from "./stage/StageApp";
 
