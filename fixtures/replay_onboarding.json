@@ -1,0 +1,344 @@
+{
+  "_comment": "Offline replay of director tool calls for samples/rehearsal_onboarding.txt. A test double: it exercises grounding, placement, tucking, reveal, recall and latency without a key. It is not a substitute for running the rehearsal against Claude.",
+  "fixtures": [
+    {
+      "when": "activation went from",
+      "tool": "show_metric",
+      "input": {
+        "reason": "A headline number from the data: show the KPI and its change.",
+        "beat": "Activation headline",
+        "arc": "Quarterly onboarding update. Activation rose over the quarter.",
+        "replace_id": "",
+        "tuck_ids": [],
+        "title": "Activation rate",
+        "aliases": [
+          "activation",
+          "headline"
+        ],
+        "caption": "Weekly, this quarter",
+        "value": {
+          "table": "q3_metrics",
+          "column": "activation_rate",
+          "pick": "last",
+          "match_column": "",
+          "match_value": ""
+        },
+        "baseline": {
+          "table": "q3_metrics",
+          "column": "activation_rate",
+          "pick": "first",
+          "match_column": "",
+          "match_value": ""
+        },
+        "trend": {
+          "table": "q3_metrics",
+          "x": "week",
+          "y": "activation_rate",
+          "filter_column": "",
+          "filter_value": ""
+        },
+        "good_direction": "up"
+      }
+    },
+    {
+      "when": "drop-?off is concentrated|setting up a workspace",
+      "tool": "show_funnel",
+      "input": {
+        "reason": "New beat about where people drop off: the funnel shows it, the metric card can go.",
+        "beat": "Workspace drop-off",
+        "arc": "Activation rose over the quarter, but most people who leave do so at workspace setup.",
+        "replace_id": "",
+        "tuck_ids": [
+          "$metric"
+        ],
+        "title": "Onboarding funnel",
+        "aliases": [
+          "funnel",
+          "drop-off",
+          "workspace step"
+        ],
+        "subtitle": "Share of sign-ups reaching each step",
+        "steps": {
+          "table": "onboarding_funnel",
+          "x": "step",
+          "y": "share_of_signups",
+          "filter_column": "",
+          "filter_value": ""
+        },
+        "highlight_step": "Set up workspace"
+      }
+    },
+    {
+      "when": "closed the tab",
+      "tool": "act",
+      "input": {
+        "reason": "A customer story: nothing to show, and the funnel has made its point.",
+        "beat": "Customer story",
+        "arc": "Activation rose, workspace setup is the drop-off, and a customer story shows why.",
+        "action": "tuck",
+        "target_ids": [
+          "$funnel"
+        ]
+      }
+    },
+    {
+      "when": "first, templates",
+      "tool": "show_strategy",
+      "input": {
+        "reason": "The first of three announced moves was just said.",
+        "beat": "Three moves",
+        "arc": "Activation rose this quarter, but people stall at workspace setup. The fix is three moves.",
+        "replace_id": "",
+        "tuck_ids": [],
+        "title": "Three moves",
+        "aliases": [
+          "moves",
+          "plan",
+          "proposal"
+        ],
+        "reveal": "progressive",
+        "points": [
+          {
+            "icon": "layout-template",
+            "text": "Templates, not a blank page",
+            "detail": "",
+            "cue": "templates blank page"
+          }
+        ]
+      }
+    },
+    {
+      "when": "second, imports",
+      "tool": "show_strategy",
+      "input": {
+        "reason": "Second move said: add it to the card.",
+        "beat": "Three moves",
+        "arc": "Activation rose this quarter, but people stall at workspace setup. The fix is three moves.",
+        "replace_id": "$strategy",
+        "tuck_ids": [],
+        "title": "Three moves",
+        "aliases": [
+          "moves",
+          "plan",
+          "proposal"
+        ],
+        "reveal": "progressive",
+        "points": [
+          {
+            "icon": "layout-template",
+            "text": "Templates, not a blank page",
+            "detail": "",
+            "cue": "templates blank page"
+          },
+          {
+            "icon": "download",
+            "text": "Import from existing tools",
+            "detail": "",
+            "cue": "imports tools"
+          }
+        ]
+      }
+    },
+    {
+      "when": "third, invites",
+      "tool": "show_strategy",
+      "input": {
+        "reason": "Third move said: the card is complete.",
+        "beat": "Three moves",
+        "arc": "Activation rose this quarter, but people stall at workspace setup. The fix is three moves.",
+        "replace_id": "$strategy",
+        "tuck_ids": [],
+        "title": "Three moves",
+        "aliases": [
+          "moves",
+          "plan",
+          "proposal"
+        ],
+        "reveal": "progressive",
+        "points": [
+          {
+            "icon": "layout-template",
+            "text": "Templates, not a blank page",
+            "detail": "",
+            "cue": "templates blank page"
+          },
+          {
+            "icon": "download",
+            "text": "Import from existing tools",
+            "detail": "",
+            "cue": "imports tools"
+          },
+          {
+            "icon": "user-plus",
+            "text": "Invite later, not first",
+            "detail": "",
+            "cue": "invites later"
+          }
+        ]
+      }
+    },
+    {
+      "when": "picture opening the app",
+      "tool": "show_ui_sketch",
+      "input": {
+        "reason": "A picture-this moment: sketch the screen they describe.",
+        "beat": "New first run",
+        "arc": "Three moves fix onboarding; the first screen will offer templates.",
+        "replace_id": "",
+        "tuck_ids": [],
+        "title": "Templates on first open",
+        "aliases": [
+          "templates screen",
+          "sketch",
+          "first screen"
+        ],
+        "caption": "",
+        "window_title": "New workspace",
+        "sidebar": [
+          "Home",
+          "Projects",
+          "Templates",
+          "Settings"
+        ],
+        "heading": "Start with a template",
+        "blocks": [
+          {
+            "kind": "grid",
+            "label": "Ready-made templates",
+            "items": [
+              "Product roadmap",
+              "Sprint planning",
+              "Team wiki",
+              "Launch plan"
+            ],
+            "highlight": true
+          },
+          {
+            "kind": "button",
+            "label": "Start from scratch",
+            "items": [],
+            "highlight": false
+          }
+        ]
+      }
+    },
+    {
+      "when": "templates ship in november",
+      "tool": "show_roadmap",
+      "input": {
+        "reason": "A dated plan begins: start the roadmap and clear the previous beat.",
+        "beat": "Rollout",
+        "arc": "Activation rose, setup is the drop-off, three moves fix it, rolling out over the next months.",
+        "replace_id": "",
+        "tuck_ids": [
+          "$strategy",
+          "$ui_sketch"
+        ],
+        "title": "Rollout",
+        "aliases": [
+          "roadmap",
+          "timeline",
+          "rollout"
+        ],
+        "reveal": "progressive",
+        "items": [
+          {
+            "when": "November",
+            "label": "Templates",
+            "detail": "",
+            "cue": "templates november"
+          }
+        ]
+      }
+    },
+    {
+      "when": "imports follow in december",
+      "tool": "show_roadmap",
+      "input": {
+        "reason": "Second milestone said.",
+        "beat": "Rollout",
+        "arc": "Activation rose, setup is the drop-off, three moves fix it, rolling out over the next months.",
+        "replace_id": "$roadmap",
+        "tuck_ids": [],
+        "title": "Rollout",
+        "aliases": [
+          "roadmap",
+          "timeline",
+          "rollout"
+        ],
+        "reveal": "progressive",
+        "items": [
+          {
+            "when": "November",
+            "label": "Templates",
+            "detail": "",
+            "cue": "templates november"
+          },
+          {
+            "when": "December",
+            "label": "Imports",
+            "detail": "",
+            "cue": "imports december"
+          }
+        ]
+      }
+    },
+    {
+      "when": "january",
+      "tool": "show_roadmap",
+      "input": {
+        "reason": "Third milestone said.",
+        "beat": "Rollout",
+        "arc": "Activation rose, setup is the drop-off, three moves fix it, rolling out over the next months.",
+        "replace_id": "$roadmap",
+        "tuck_ids": [],
+        "title": "Rollout",
+        "aliases": [
+          "roadmap",
+          "timeline",
+          "rollout"
+        ],
+        "reveal": "progressive",
+        "items": [
+          {
+            "when": "November",
+            "label": "Templates",
+            "detail": "",
+            "cue": "templates november"
+          },
+          {
+            "when": "December",
+            "label": "Imports",
+            "detail": "",
+            "cue": "imports december"
+          },
+          {
+            "when": "January",
+            "label": "Invites move later",
+            "detail": "",
+            "cue": "january invites"
+          }
+        ]
+      }
+    },
+    {
+      "when": "back the plan",
+      "tool": "show_statement",
+      "input": {
+        "reason": "The closing ask: one short line.",
+        "beat": "The ask",
+        "arc": "Activation rose, setup is the drop-off, three moves roll out by January, and the ask is to back the plan.",
+        "replace_id": "",
+        "tuck_ids": [
+          "$roadmap"
+        ],
+        "title": "The ask",
+        "aliases": [
+          "ask"
+        ],
+        "kicker": "The ask",
+        "text": "Back the plan and ship templates in November"
+      }
+    }
+  ]
+}

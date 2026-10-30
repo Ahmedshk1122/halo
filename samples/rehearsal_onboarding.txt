@@ -1,0 +1,57 @@
+# Rehearsal script: onboarding update.
+# One spoken segment per line, written the way a recognizer transcribes speech.
+# "## name" labels a beat for the rehearsal report; it is never sent to Halo.
+# "[pause 2]" waits two seconds.
+
+## greeting
+Hi everyone, thanks for joining this morning.
+It's good to see so many of you here, and I know it's a busy week.
+[pause 1]
+
+## headline
+Let's start with the headline.
+Over the quarter, activation went from 31 to 44%.
+That's the biggest jump we've had since launch, and it held up week after week.
+[pause 1]
+
+## drop-off
+But we are still losing a lot of people on the way in.
+When you look at where they leave, the drop-off is concentrated at one step, setting up a workspace.
+Almost everyone verifies their email, and then a big share of them stall right there.
+[pause 1]
+
+## anecdote
+I talked to a customer last week, she runs a small design studio.
+She told me she opened the app, saw an empty workspace, and just closed the tab.
+She only came back because a colleague invited her a month later.
+That story really stuck with me.
+[pause 1]
+
+## proposal
+So here's what we want to do about it, and it comes down to three moves.
+First, templates instead of a blank page.
+Second, imports from the tools people already use.
+And third, invites later rather than first.
+[pause 1]
+
+## picture
+Picture opening the app for the first time, and you see this.
+A set of ready-made templates for the work you already do, and one clear button to start from scratch.
+[pause 1]
+
+## rollout
+Here's how we'd roll it out.
+Templates ship in November.
+Imports follow in December.
+And in January we move invites later in the flow.
+[pause 1]
+
+## recall
+Halo, back to the funnel.
+That workspace step is exactly what all three moves are aimed at.
+[pause 1]
+
+## close
+So here's my ask.
+Back the plan today, and help us ship templates in November.
+Thank you.

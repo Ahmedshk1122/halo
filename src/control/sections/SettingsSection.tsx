@@ -8,6 +8,8 @@ export function SettingsSection() {
   const glass = useStore(store, (s) => s.glass);
   const reducedMotion = useStore(store, (s) => s.reducedMotion);
   const cameraDeviceId = useStore(store, (s) => s.cameraDeviceId);
+  const provider = useStore(store, (s) => s.director.provider);
+  const proactivity = useStore(store, (s) => s.director.proactivity);
   const [cameras, setCameras] = useState<MediaDeviceInfo[]>([]);
 
   useEffect(() => {
@@ -16,6 +18,32 @@ export function SettingsSection() {
 
   return (
     <>
+      <Group
+        title="Director"
+        footer="Replay plays back recorded decisions for the sample rehearsal script, so the pipeline can be tested without a key or network. Use Claude for real talks."
+      >
+        <Row label="How proactive Halo is" detail="Quiet waits for the strongest moments; eager shows more. Also sets the gap between visuals.">
+          <Segmented
+            value={proactivity}
+            onChange={(p) => store.set((s) => ({ director: { ...s.director, proactivity: p } }))}
+            options={[
+              { value: "quiet", label: "Quiet" },
+              { value: "balanced", label: "Balanced" },
+              { value: "eager", label: "Eager" },
+            ]}
+          />
+        </Row>
+        <Row label="Decisions from" detail="Claude runs the director through the local server">
+          <Segmented
+            value={provider}
+            onChange={(p) => store.set((s) => ({ director: { ...s.director, provider: p } }))}
+            options={[
+              { value: "claude", label: "Claude" },
+              { value: "replay", label: "Replay (offline test)" },
+            ]}
+          />
+        </Row>
+      </Group>
       <Group title="Camera">
         <Row label="Camera" detail="Used by the stage window and this preview">
           <select

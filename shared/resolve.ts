@@ -193,13 +193,13 @@ function checkShape(spec: VisualSpec): string[] {
   if (!spec.title) errors.push("missing title");
   switch (spec.template) {
     case "strategy":
-      if (spec.points.length < 2) errors.push("strategy needs 2 to 4 points");
+      if (spec.points.length < 1) errors.push("strategy needs 1 to 4 points");
       break;
     case "roadmap":
-      if (spec.items.length < 2) errors.push("roadmap needs 2 to 6 items");
+      if (spec.items.length < 1) errors.push("roadmap needs 1 to 6 items");
       break;
     case "process":
-      if (spec.steps.length < 2) errors.push("process needs 2 to 5 steps");
+      if (spec.steps.length < 1) errors.push("process needs 1 to 5 steps");
       break;
     case "ui_sketch":
       if (spec.blocks.length < 1) errors.push("ui sketch needs at least one block");

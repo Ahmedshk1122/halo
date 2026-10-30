@@ -2,7 +2,10 @@ import { Database, FileText, Play, Radio, Settings } from "lucide-react";
 import { useEffect, type ReactNode } from "react";
 import { useStore } from "./createStore";
 import { Inspector } from "./Inspector";
+import { startDirector } from "./director/setup";
+import { ListenButton, LatencyPill } from "./Toolbar";
 import { restore, startPersisting } from "./persist";
+import { RehearsalSection } from "./sections/RehearsalSection";
 import { DataSection } from "./sections/DataSection";
 import { LiveSection } from "./sections/LiveSection";
 import { SettingsSection } from "./sections/SettingsSection";
@@ -34,6 +37,7 @@ export function ControlApp() {
     restore();
     startPersisting();
     startStageSync();
+    startDirector();
   }, []);
 
   const current = NAV.find((n) => n.id === section)!;
@@ -74,6 +78,8 @@ export function ControlApp() {
         <header className="ctl-toolbar">
           <h1>{current.label}</h1>
           <div className="ctl-toolbar-spacer" />
+          <LatencyPill />
+          <ListenButton />
           <Button onClick={openStageWindow} title="Open the window OBS captures">
             Open stage window
           </Button>
@@ -82,7 +88,7 @@ export function ControlApp() {
           {section === "live" && <LiveSection />}
           {section === "data" && <DataSection />}
           {section === "notes" && <Empty title="Talk notes">Coming in milestone 4.</Empty>}
-          {section === "rehearsal" && <Empty title="Rehearsal">Coming in milestone 3.</Empty>}
+          {section === "rehearsal" && <RehearsalSection />}
           {section === "settings" && <SettingsSection />}
         </div>
       </main>

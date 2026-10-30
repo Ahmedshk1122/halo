@@ -2,10 +2,11 @@
 // renders the StageState derived from it.
 
 import type { DataTable } from "../../shared/data";
+import type { DirectorAction, Proactivity } from "../../shared/director";
 import type { Rect } from "../../shared/geometry";
 import type { Slot } from "../../shared/layout";
 import type { GlassTheme } from "../../shared/stage";
-import type { ResolvedVisual, VisualSpec } from "../../shared/visuals";
+import type { ResolvedVisual, TemplateId, VisualSpec } from "../../shared/visuals";
 import { createStore } from "./createStore";
 
 export type VisualStatus = "onscreen" | "tucked" | "cleared";
@@ -31,7 +32,69 @@ export interface VisualInstance {
   beat: string;
   createdAt: number;
   shownAt: number;
+  /** Speech after this time counts toward revealing items by their cues. */
+  cueFrom: number;
+  /** Director visuals: reveal anything still hidden at this time (its items were already said). */
+  revealDeadline: number | null;
+  /** Words spoken when the last item was revealed (prepared visuals fall back to pacing). */
+  wordsAtReveal: number;
 }
+
+export interface TranscriptEntry {
+  id: number;
+  text: string;
+  at: number;
+  startedAt: number;
+  /** Rehearsal beat label, if any. */
+  label?: string;
+  /** Voice command handled locally, if any. */
+  command?: string;
+}
+
+export type DecisionTrigger = "final" | "interim" | "command" | "request";
+export type DecisionOutcome = "applied" | "none" | "dropped" | "deferred" | "superseded" | "error" | "pending";
+
+export interface DecisionEntry {
+  id: number;
+  at: number;
+  trigger: DecisionTrigger;
+  source: "claude" | "replay" | "command";
+  action: DirectorAction | "error";
+  outcome: DecisionOutcome;
+  reason: string;
+  beat: string;
+  /** Rehearsal beat label of the speech that triggered it. */
+  label?: string;
+  said: string;
+  visualId?: string;
+  title?: string;
+  template?: TemplateId;
+  errors?: string[];
+  speechEndAt: number;
+  requestMs?: number;
+  modelMs?: number;
+  /** End of speech to visual on stage. */
+  onScreenMs?: number;
+  model?: string;
+}
+
+export interface BeatEntry {
+  name: string;
+  at: number;
+  visualIds: string[];
+}
+
+export interface PreparedVisual {
+  id: string;
+  when: string;
+  template: TemplateId;
+  title: string;
+  spec: VisualSpec;
+  visual: ResolvedVisual | null;
+  errors: string[];
+}
+
+export type SpeechStatus = "idle" | "starting" | "listening" | "restarting" | "error" | "unsupported";
 
 export type Section = "live" | "data" | "notes" | "rehearsal" | "settings";
 
@@ -57,6 +120,18 @@ export interface ControlState {
   stage: StageLink;
   /** Loaded data. The only source of numbers on screen. */
   tables: DataTable[];
+  transcript: TranscriptEntry[];
+  interim: { text: string; at: number; label?: string } | null;
+  decisions: DecisionEntry[];
+  arc: { summary: string; beat: string; beats: BeatEntry[] };
+  director: {
+    provider: "claude" | "replay";
+    proactivity: Proactivity;
+    inFlight: boolean;
+    lastShowAt: number | null;
+  };
+  speech: { status: SpeechStatus; detail?: string; source: "live" | "rehearsal" | null };
+  prepared: PreparedVisual[];
 }
 
 export const store = createStore<ControlState>({
@@ -71,4 +146,11 @@ export const store = createStore<ControlState>({
   keepOut: null,
   stage: { connected: false, camera: "unknown", size: null, lastHello: 0 },
   tables: [],
+  transcript: [],
+  interim: null,
+  decisions: [],
+  arc: { summary: "", beat: "", beats: [] },
+  director: { provider: "claude", proactivity: "balanced", inFlight: false, lastShowAt: null },
+  speech: { status: "idle", source: null },
+  prepared: [],
 });

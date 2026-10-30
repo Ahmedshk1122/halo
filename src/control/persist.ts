@@ -2,7 +2,10 @@
 import { store, type ControlState } from "./state";
 
 const KEY = "halo.v1";
-type Persisted = Pick<ControlState, "tables" | "glass" | "cameraDeviceId" | "reducedMotion">;
+type Persisted = Pick<ControlState, "tables" | "glass" | "cameraDeviceId" | "reducedMotion"> & {
+  provider?: ControlState["director"]["provider"];
+  proactivity?: ControlState["director"]["proactivity"];
+};
 
 export function restore() {
   try {
@@ -15,6 +18,13 @@ export function restore() {
       ...(typeof saved.cameraDeviceId === "string" ? { cameraDeviceId: saved.cameraDeviceId } : {}),
       ...(typeof saved.reducedMotion === "boolean" ? { reducedMotion: saved.reducedMotion } : {}),
     });
+    store.set((s) => ({
+      director: {
+        ...s.director,
+        ...(saved.provider === "claude" || saved.provider === "replay" ? { provider: saved.provider } : {}),
+        ...(saved.proactivity === "quiet" || saved.proactivity === "balanced" || saved.proactivity === "eager" ? { proactivity: saved.proactivity } : {}),
+      },
+    }));
   } catch {
     // Private window or blocked storage: start fresh.
   }
@@ -22,10 +32,24 @@ export function restore() {
 
 export function startPersisting() {
   store.subscribe((s, prev) => {
-    if (s.tables === prev.tables && s.glass === prev.glass && s.cameraDeviceId === prev.cameraDeviceId && s.reducedMotion === prev.reducedMotion) {
+    if (
+      s.tables === prev.tables &&
+      s.glass === prev.glass &&
+      s.cameraDeviceId === prev.cameraDeviceId &&
+      s.reducedMotion === prev.reducedMotion &&
+      s.director.provider === prev.director.provider &&
+      s.director.proactivity === prev.director.proactivity
+    ) {
       return;
     }
-    const data: Persisted = { tables: s.tables, glass: s.glass, cameraDeviceId: s.cameraDeviceId, reducedMotion: s.reducedMotion };
+    const data: Persisted = {
+      tables: s.tables,
+      glass: s.glass,
+      cameraDeviceId: s.cameraDeviceId,
+      reducedMotion: s.reducedMotion,
+      provider: s.director.provider,
+      proactivity: s.director.proactivity,
+    };
     try {
       localStorage.setItem(KEY, JSON.stringify(data));
     } catch {

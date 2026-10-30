@@ -30,6 +30,8 @@ interface ShowOptions {
   aliases?: string[];
   /** Visuals to tuck in the same move (the beat moved on). */
   tuck?: string[];
+  cueFrom?: number;
+  revealDeadline?: number | null;
 }
 
 /**
@@ -59,6 +61,9 @@ export function showVisual(visual: ResolvedVisual, opts: ShowOptions): string {
     beat: opts.beat ?? "",
     createdAt: t,
     shownAt: t,
+    cueFrom: opts.cueFrom ?? t,
+    revealDeadline: opts.revealDeadline ?? null,
+    wordsAtReveal: 0,
   };
   store.set({ visuals: { ...state.visuals, [id]: instance }, nextVisualNumber: state.nextVisualNumber + 1 });
   for (const tid of opts.tuck ?? []) tuckVisual(tid);
