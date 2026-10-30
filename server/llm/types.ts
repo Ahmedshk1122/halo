@@ -8,8 +8,8 @@ export interface ToolCallRequest {
   system: { text: string; cache: boolean }[];
   user: string;
   tools: ToolDef[];
-  /** Require exactly one tool call (director) or allow several (planner). */
-  mode: "one" | "many";
+  /** Require exactly one tool call (director), allow several (planner), or only warm the cache. */
+  mode: "one" | "many" | "warm";
   maxTokens: number;
   timeoutMs: number;
 }

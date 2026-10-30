@@ -43,3 +43,18 @@ describe("server director", () => {
     expect(res.decision).toMatchObject({ action: "none", arc: "Onboarding update.", beat: "Greeting" });
   });
 });
+
+describe("cache warm-up", () => {
+  it("sends the same cached prefix with max_tokens 0", async () => {
+    const { warm } = await import("../server/director/director");
+    const llm = new FakeLLM({});
+    await warm(llm, { catalog: 'Table "q3_metrics"', prepared: [] }, { model: "claude-haiku-5-5", effort: "low" });
+    const real = new FakeLLM({});
+    await decide(real, request, { model: "claude-haiku-5-5", effort: "low" });
+    expect(llm.last?.maxTokens).toBe(0);
+    expect(llm.last?.mode).toBe("warm");
+    expect(llm.last?.system).toEqual(real.last?.system);
+    expect(JSON.stringify(llm.last?.tools)).toBe(JSON.stringify(real.last?.tools));
+    expect(llm.last?.effort).toBe(real.last?.effort);
+  });
+});

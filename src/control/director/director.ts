@@ -21,7 +21,7 @@ import {
   updateVisual,
 } from "../stageActions";
 import { onStageRendered } from "../stageSync";
-import { store, type DecisionEntry, type DecisionTrigger, type VisualInstance } from "../state";
+import { store, type ControlState, type DecisionEntry, type DecisionTrigger, type VisualInstance } from "../state";
 import { allVisuals, matchPrepared, matchVisual, parseCommand, type ParsedCommand } from "./commands";
 import { ServerDirector, type DirectorProvider } from "./providers";
 
@@ -37,6 +37,16 @@ interface Trigger {
   trigger: DecisionTrigger;
   speechEndAt: number;
   request: string | null;
+}
+
+let catalogFor: ControlState["tables"] | null = null;
+let catalogCache = "";
+function catalogText(tables: ControlState["tables"]): string {
+  if (tables !== catalogFor) {
+    catalogFor = tables;
+    catalogCache = describeCatalog(tables);
+  }
+  return catalogCache;
 }
 
 class Director {
@@ -242,7 +252,7 @@ class Director {
       chips: chips.map(({ id, visual, title }) => ({ id, template: visual.template, title })),
       history,
       secondsSinceLastShow: s.director.lastShowAt === null ? null : (t - s.director.lastShowAt) / 1000,
-      catalog: describeCatalog(s.tables),
+      catalog: catalogText(s.tables),
       prepared: s.prepared.filter((p) => p.visual).map((p) => ({ id: p.id, template: p.template, title: p.title, when: p.when })),
       proactivity: s.director.proactivity,
       request,

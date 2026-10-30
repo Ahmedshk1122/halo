@@ -123,7 +123,17 @@ function DecisionsView() {
         {inFlight && <span className="muted">Thinking…</span>}
       </div>
       {shown.length === 0 && <Empty title="No decisions yet">Halo logs every decision here, with its reason and latency.</Empty>}
-      {shown.map((d) => (
+      {shown.map((d) =>
+        d.outcome === "none" && d.action === "none" ? (
+          <article key={d.id} className="decision is-quiet" data-action="none">
+            <span className="decision-quiet-reason">{d.reason || "Nothing on screen changes"}</span>
+            <span className="decision-meta">
+              {clock(d.at)}
+              {d.label && ` · ${d.label}`}
+              {d.requestMs !== undefined && ` · ${fmtMs(d.requestMs)}`}
+            </span>
+          </article>
+        ) : (
         <article key={d.id} className="decision" data-action={d.action} data-outcome={d.outcome}>
           <header className="decision-head">
             <Pill tone={outcomeTone(d)}>
@@ -150,7 +160,8 @@ function DecisionsView() {
             )}
           </footer>
         </article>
-      ))}
+        ),
+      )}
     </div>
   );
 }

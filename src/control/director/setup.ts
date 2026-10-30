@@ -3,6 +3,7 @@ import replay from "../../../fixtures/replay_onboarding.json";
 import { store } from "../state";
 import { director } from "./director";
 import { ReplayDirector, ServerDirector, type ReplayFixture } from "./providers";
+import { startWarmup } from "./warmup";
 
 export const replayDirector = new ReplayDirector((replay as { fixtures: ReplayFixture[] }).fixtures);
 
@@ -17,6 +18,7 @@ export function startDirector() {
     }
   };
   apply();
+  startWarmup();
   store.subscribe((s, prev) => {
     if (s.director.provider !== prev.director.provider) apply();
   });

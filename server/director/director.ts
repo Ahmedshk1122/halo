@@ -50,3 +50,25 @@ export async function decide(llm: LLMClient, req: DirectorRequest, opts: Directo
     usage: result.usage,
   };
 }
+
+/**
+ * Writes the director's cached prefix (tools, rules, catalog, prepared visuals)
+ * before the talk, with a max_tokens: 0 request, so the first real decision
+ * reads it from cache. Same model and effort as real traffic.
+ */
+export async function warm(llm: LLMClient, ctx: Pick<DirectorRequest, "catalog" | "prepared">, opts: DirectorOptions) {
+  const result = await llm.callTools({
+    model: opts.model,
+    effort: opts.effort,
+    system: [
+      { text: DIRECTOR_SYSTEM, cache: true },
+      { text: contextBlock(ctx), cache: true },
+    ],
+    user: "warmup",
+    tools: TOOLS,
+    mode: "warm",
+    maxTokens: 0,
+    timeoutMs: 15000,
+  });
+  return { ms: Math.round(result.ms), cacheWrite: result.usage.cacheWrite, cacheRead: result.usage.cacheRead };
+}

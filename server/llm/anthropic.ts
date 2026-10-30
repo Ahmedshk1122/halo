@@ -20,7 +20,7 @@ export class AnthropicLLM implements LLMClient {
 
   async callTools(req: ToolCallRequest): Promise<ToolCallResult> {
     if (!this.client) throw new Error("ANTHROPIC_API_KEY is not set in .env");
-    const forced = !NO_FORCED_TOOL_CHOICE.test(req.model);
+    const forced = req.mode === "one" && !NO_FORCED_TOOL_CHOICE.test(req.model);
     const fallback = FALLBACK_DEFAULT.test(req.model);
     const started = performance.now();
 
@@ -35,6 +35,8 @@ export class AnthropicLLM implements LLMClient {
         })),
         messages: [{ role: "user", content: req.user }],
         tools: req.tools.map((t) => ({ ...t, input_schema: t.input_schema as Anthropic.Beta.BetaTool.InputSchema, strict: true })),
+        // A max_tokens: 0 warm-up only runs prefill to write the cache; it rejects a forced
+        // tool_choice, and tool_choice does not affect the cached tools + system prefix.
         tool_choice:
           req.mode === "one"
             ? forced
@@ -42,7 +44,7 @@ export class AnthropicLLM implements LLMClient {
               : { type: "auto", disable_parallel_tool_use: true }
             : { type: "auto" },
         output_config: { effort: req.effort },
-        ...(fallback ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const } : {}),
+        ...(fallback && req.mode !== "warm" ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const } : {}),
       },
       { timeout: req.timeoutMs },
     );

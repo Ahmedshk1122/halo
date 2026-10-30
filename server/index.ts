@@ -2,7 +2,7 @@ import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import type { DirectorRequest } from "../shared/director";
 import { config } from "./config";
-import { decide } from "./director/director";
+import { decide, warm } from "./director/director";
 import { AnthropicLLM, describeLLMError } from "./llm/anthropic";
 import { plan } from "./planner/planner";
 
@@ -28,6 +28,17 @@ app.post("/api/director", async (c) => {
   } catch (err) {
     const { status, message } = describeLLMError(err);
     console.error(`director: ${message}`);
+    return c.json({ error: message }, status as 400);
+  }
+});
+
+app.post("/api/director/warm", async (c) => {
+  if (!llm.available) return c.json({ error: "ANTHROPIC_API_KEY is not set in .env" }, 503);
+  const ctx = (await c.req.json()) as Pick<DirectorRequest, "catalog" | "prepared">;
+  try {
+    return c.json(await warm(llm, { catalog: ctx.catalog ?? "", prepared: ctx.prepared ?? [] }, { model: config.directorModel, effort: config.directorEffort }));
+  } catch (err) {
+    const { status, message } = describeLLMError(err);
     return c.json({ error: message }, status as 400);
   }
 });

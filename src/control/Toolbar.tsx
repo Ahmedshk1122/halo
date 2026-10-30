@@ -1,4 +1,4 @@
-import { Mic, MicOff } from "lucide-react";
+import { Mic, MicOff, Play } from "lucide-react";
 import { WebSpeechSource } from "../speech/webSpeech";
 import { useStore } from "./createStore";
 import { director } from "./director/director";
@@ -27,7 +27,7 @@ export function ListenButton() {
       title={speech.detail ?? (live ? "Stop listening" : "Start listening to your microphone")}
       onClick={() => (live ? director.detach() : director.attach(new WebSpeechSource()))}
     >
-      {live ? <Mic size={14} strokeWidth={2} /> : <MicOff size={14} strokeWidth={2} />}
+      {speech.source === "rehearsal" ? <Play size={14} strokeWidth={2} /> : live ? <Mic size={14} strokeWidth={2} /> : <MicOff size={14} strokeWidth={2} />}
       {label}
     </button>
   );

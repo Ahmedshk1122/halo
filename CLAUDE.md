@@ -57,8 +57,26 @@ Every visual on the video should feel like Apple Keynote or visionOS made it: ca
 - Point (index finger out) and dwell ~600ms on part of a visual to target it (orange ring). Pinch, hold and move to drag; it stays where it is put. Quick pinch-tap expands or collapses.
 - Default slots: left third, right third, lower band, 48px safe margin; chips along the top edge. The control window has a mouse fallback for all of it.
 
+## How the pieces fit
+
+- **Director loop** (`src/control/director/director.ts`): triggers on each final speech segment and when the interim transcript grows ~12 words without a final. One request in flight; later speech merges into the next request. Each request carries the running arc summary, the last ~60 s of transcript (new lines marked), what is on stage, chips and history, the data catalog, and prepared visuals.
+- **Decisions** are `none | show | update | tuck | recall | clear` with a reason (control window only), a beat name and an updated arc. Claude answers with exactly one strict tool call (`shared/director.ts`): one `show_*` tool per template (`replace_id` makes it an update), `show_prepared`, and `act`.
+- **Grounding** (`shared/resolve.ts`, `shared/grounding.ts`): every visual goes through `prepareVisual` (tidy copy → shape check → text scan → resolve references) before it reaches the stage. Templates render only `ResolvedVisual`.
+- **Pacing in code, not just the prompt:** at most two on stage (oldest tucked), spacing between new visuals by proactivity (quiet 10 s, balanced 6 s, eager 4 s) unless the presenter asked, no duplicates (recall instead).
+- **Reveal** (`shared/reveal.ts`): list items appear when their cue words are spoken. The director builds lists item by item with `replace_id` as they are said; prepared visuals reveal on cues with a pacing fallback.
+- **Voice commands** (`src/control/director/commands.ts`) are handled locally for speed; anything unresolved becomes an explicit director request.
+- **Notes planning** (`server/planner/planner.ts`): one pass with `prepare_*` tools; every prepared visual is grounded before use.
+- **Hands** (`shared/gestures.ts` pure state machine, `src/hands/tracker.ts` MediaPipe, `src/control/hands/`): gestures and the mouse fallback work in the presenter's mirrored frame; the face keep-out flows into placement.
+- **Latency:** end of speech → stage render ack (`rendered` message) is logged per decision; the toolbar shows the median of the last five. The director prefix is pre-warmed with a `max_tokens: 0` request when listening starts.
+
+## Testing
+
+- `npm test`: unit tests (grounding, resolver, placement, strict-schema rules, commands, cue matching, gestures, server with a fake LLM).
+- `npm run acceptance`: plays `samples/rehearsal_onboarding.txt` through real windows and checks the nine outcomes from the brief plus number tracing. `--director claude` tests the real director; `--director replay` uses recorded tool calls.
+- The replay director (`fixtures/`) is a test double for the pipeline. Never present replay results as Claude's behavior.
+
 ## Working in this repo
 
-- `npm run dev` runs the server and Vite together. `npm test` runs unit tests. `npm run typecheck`.
+- `npm run dev` runs the server and Vite together. `npm test`, `npm run typecheck`, `npm run build`.
 - Build in milestones; after each one, run it, check it in the browser, commit, and summarize how to try it.
-- Every number on screen must trace back to a loaded file. If you add a template, add its sizes to `shared/layout.ts`, its schema to the director tools, grounding coverage, and a `/gallery` entry.
+- Every number on screen must trace back to a loaded file. If you add a template, add its type to `shared/visuals.ts`, sizes to `shared/layout.ts`, tool schema to `shared/director.ts`, text fields to `shared/grounding.ts`, resolution to `shared/resolve.ts`, a component in `src/templates/`, and a `/gallery` sample.

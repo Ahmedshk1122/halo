@@ -1,7 +1,7 @@
 // Hand tracking → gestures → stage actions, plus the face keep-out zone.
 import { STAGE_W, type Rect } from "../../../shared/geometry";
 import { classifyHand, faceKeepOut, GestureMachine, videoToStage } from "../../../shared/gestures";
-import { VisionTracker, type TrackerFrame } from "../../hands/tracker";
+import type { TrackerFrame, VisionTracker } from "../../hands/tracker";
 import { setKeepOut } from "../stageActions";
 import { store } from "../state";
 import { DragSession, expandAt, targetAt, visualAt } from "./interaction";
@@ -82,12 +82,18 @@ const roundRect = (r: Rect): Rect => ({ x: Math.round(r.x), y: Math.round(r.y), 
 export async function startHands() {
   if (tracker) return;
   store.set((s) => ({ hands: { ...s.hands, status: "loading", detail: undefined } }));
-  tracker = new VisionTracker(onFrame);
+  // MediaPipe is large; load it only when hand tracking starts.
+  const { VisionTracker: Tracker } = await import("../../hands/tracker");
+  const mine = new Tracker(onFrame);
+  tracker = mine;
   try {
-    await tracker.start(store.get().cameraDeviceId);
+    await mine.start(store.get().cameraDeviceId);
+    // Turned off (or restarted) while the models were loading.
+    if (tracker !== mine) return mine.stop();
     store.set((s) => ({ hands: { ...s.hands, status: "running" } }));
   } catch (e) {
-    tracker?.stop();
+    mine.stop();
+    if (tracker !== mine) return;
     tracker = null;
     store.set((s) => ({ hands: { ...s.hands, status: "error", detail: (e as Error).message } }));
   }

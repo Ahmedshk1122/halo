@@ -58,7 +58,12 @@ await control.waitForFunction(() => window.halo?.store);
 // Fresh run: sample data, chosen director, rehearsal at the chosen pace.
 await control.getByRole("button", { name: "Data" }).click();
 await control.getByRole("button", { name: "Load sample data" }).click();
-await control.evaluate((p) => window.halo.store.set((s) => ({ prepared: [], director: { ...s.director, provider: p, proactivity: "balanced" } })), director);
+// Hand tracking is off: this test measures the speech → director → stage pipeline,
+// and MediaPipe on a CPU-only headless browser would skew the latency numbers.
+await control.evaluate(
+  (p) => window.halo.store.set((s) => ({ prepared: [], director: { ...s.director, provider: p, proactivity: "balanced" }, hands: { ...s.hands, enabled: false } })),
+  director,
+);
 await control.getByRole("button", { name: "Rehearsal" }).click();
 await control.getByRole("radio", { name: `${speed}×` }).click();
 await control.getByRole("button", { name: "Play script" }).click();

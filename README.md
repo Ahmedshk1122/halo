@@ -1,6 +1,8 @@
 # Halo
 
-Live visuals on your camera feed during video calls. Halo listens as you talk, follows the arc of your talk, and puts supporting visuals on your video: metric cards, charts, strategy cards, roadmaps, rough UI sketches. Numbers only ever come from data you load ahead of time.
+Live visuals on your camera feed during video calls. Halo listens as you talk, follows the arc of your talk, and puts supporting visuals on your video: metric cards, charts, strategy cards, roadmaps, rough UI sketches. It's like a slide deck building itself as you speak. Often the right answer is to show nothing, and Halo knows that.
+
+Numbers only ever come from data you load ahead of time. Halo never puts captions or your words on the video.
 
 This is the web prototype. Halo renders a clean stage window in Chrome, OBS captures that window, and OBS Virtual Camera feeds it to Zoom, Teams or Meet.
 
@@ -29,9 +31,7 @@ cp .env.example .env      # then put your key in ANTHROPIC_API_KEY
 npm run dev
 ```
 
-This starts the API server on `127.0.0.1:8787` and the app on `http://localhost:5173`.
-
-Then open the two windows. The helper script opens them in a dedicated Chrome profile with background throttling turned off, so the stage keeps rendering while Zoom covers it:
+This starts the API server on `127.0.0.1:8787` and the app on `http://localhost:5173`. Then open the two windows. The helper script opens them in a dedicated Chrome profile with background throttling off, so the stage keeps rendering while Zoom covers it:
 
 ```bash
 ./scripts/open-chrome.sh
@@ -39,20 +39,41 @@ Then open the two windows. The helper script opens them in a dedicated Chrome pr
 
 Or open them yourself:
 
-- `http://localhost:5173/control` — your presenter panel. Only you see this.
-- `http://localhost:5173/stage` — the clean stage OBS captures. Size it to 1280×720 (the panel's "Open stage window" button does this).
+- `http://localhost:5173/control`: your presenter panel. Only you see it.
+- `http://localhost:5173/stage`: the clean stage OBS captures. Size it to 1280×720 (the panel's **Open stage window** button does this).
 
 Allow camera and microphone access when Chrome asks.
 
-### Keep Chrome rendering in the background
+## Before your talk
 
-macOS tells Chrome when a window is covered, and Chrome then stops painting it. OBS would capture a frozen stage. `scripts/open-chrome.sh` launches Chrome with:
+1. **Data.** Drag your CSV or XLSX files into **Data** (or click **Load sample data**). Each sheet becomes a table with typed columns. These files are the only place numbers on screen can come from.
+2. **Talk notes (optional).** Paste or open your notes in **Talk notes** and click **Prepare visuals**. One planning pass prepares the visuals you will likely need; during the talk Halo can show them instantly.
+3. **Rehearse.** In **Rehearsal**, play a script through the exact same pipeline as live speech. The sample script is an onboarding update; edit it or paste your own. The beat-by-beat report shows what Halo did and how fast.
 
-```
---disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-background-timer-throttling
-```
+## During your talk
 
-If you open Chrome another way, quit it fully first and start it with those flags.
+Click **Listen** in the toolbar. Halo decides on its own when a visual helps. You can steer it by voice:
+
+| Say | What happens |
+| --- | --- |
+| "Halo, show the roadmap" | Recalls it, shows a prepared one, or asks the director to build it now |
+| "Halo, back" | Brings back the most recently tucked visual |
+| "Halo, back to the funnel" / "let's go back to the funnel" | Recalls that visual from its chip |
+| "Halo, hide that" | Tucks what is on screen into chips |
+| "Halo, clear" | Clears the stage (history is kept) |
+| "Halo, expand" / "collapse" | Grows or shrinks the visual on screen |
+| "Halo, next" | Reveals the next item of a list |
+
+**Hands** (MediaPipe, in the control window):
+
+- Point with your index finger and hold still for about 0.6 s to ring part of a visual in orange.
+- Pinch, hold and move to drag a visual. It stays where you put it.
+- A quick pinch-tap expands or collapses it.
+- Your face is a keep-out zone: visuals never cover it, whether placed by Halo or by you.
+
+**Mouse fallback** in the preview: click a part to ring it, drag to move, double-click to expand, click a chip to recall.
+
+The control window shows the transcript (only you see it), every decision with its reason, and the end-of-speech-to-visual latency (target under 2.5 s).
 
 ## OBS setup
 
@@ -63,14 +84,80 @@ If you open Chrome another way, quit it fully first and start it with those flag
 5. In Zoom, go to **Settings** → **Video** → **Camera** and pick **OBS Virtual Camera**. Teams and Meet have the same setting.
 6. In Zoom, turn off **Mirror my video** so text reads correctly in your own preview. Everyone else always sees it unmirrored.
 
-Halo's control window shows you a mirrored preview, so pointing at visuals feels natural.
+### Keep Chrome rendering in the background
+
+macOS tells Chrome when a window is covered, and Chrome then stops painting it, so OBS would capture a frozen stage. `scripts/open-chrome.sh` launches Chrome with:
+
+```
+--disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-background-timer-throttling
+```
+
+If you open Chrome another way, quit it fully first and start it with those flags.
+
+## Acceptance test
+
+With `npm run dev` running:
+
+```bash
+npm run acceptance
+```
+
+This plays `samples/rehearsal_onboarding.txt` through real control and stage windows (your installed Chrome on macOS) and checks the expected outcomes:
+
+1. Nothing during the greeting
+2. A pinned activation metric card
+3. A funnel, with the metric card tucked into a chip
+4. Nothing during the anecdote
+5. A three-moves strategy card revealed point by point
+6. A template-screen UI sketch
+7. A roadmap
+8. The funnel recalled on command
+9. A closing statement card
+
+It also checks that every number on screen traces back to the sample files, and reports the median latency. Screenshots of each beat and a JSON report go to `artifacts/acceptance/`. Options: `--director claude|replay`, `--speed 1|1.5|2`, `--headed`.
+
+**Replay director.** Settings → Decisions from → **Replay** plays back recorded tool calls for the sample script (`fixtures/`). It runs the whole pipeline (grounding, placement, tucking, reveal, recall, latency) without a key or network. It is a test double for the pipeline, not a stand-in for Claude's judgment. Run the acceptance test with `--director claude` to test the real director.
+
+## Claude
+
+Models are set in `.env`:
+
+| Variable | Default | Used for |
+| --- | --- | --- |
+| `HALO_DIRECTOR_MODEL` | `claude-haiku-5-5` | The director, on every speech segment. Fast by default. |
+| `HALO_DIRECTOR_EFFORT` | `low` | Lower is faster. |
+| `HALO_PLANNER_MODEL` | `claude-opus-5-5` | The one planning pass over your talk notes. |
+| `HALO_PLANNER_EFFORT` | `medium` | |
+
+- Output is structured with tool use and strict JSON schemas: one tool per template, plus `show_prepared` and `act`.
+- The director's rules, tools and data catalog are prompt-cached, and pre-warmed when you start listening. The cache is refreshed every four minutes while you listen.
+- On models that support it (Opus 5.5, Sonnet 5.5), requests use Anthropic's server-side refusal fallback (`fallbacks: "default"`). The default Haiku director does not need it.
+
+## Settings
+
+- **How proactive Halo is:** quiet, balanced or eager. This also sets the minimum gap between new visuals (10, 6 or 4 seconds).
+- **Glass:** light or dark material.
+- **Hand tracking**, **face zone** in the preview, **reduce motion** (the macOS setting is always respected), **camera**.
+
+## Privacy
+
+- Live speech recognition uses Chrome's Web Speech API, which sends audio to Google's speech service.
+- The director receives the transcript of the last minute, a running summary, and a description of your data (column names, types and sample rows).
+- Data, notes and settings stay in this browser's local storage.
+
+## Troubleshooting
+
+- **The stage freezes in OBS when another window covers it.** Start Chrome with the flags above (`./scripts/open-chrome.sh`).
+- **"No API key in .env"** in the sidebar. Put your key in `.env` and restart `npm run dev`.
+- **Hand tracking says it could not start.** Run `npm run setup:mediapipe`. Without local models it loads them from Google's CDN.
+- **Listening keeps restarting.** Chrome ends speech sessions after silence or about a minute; Halo restarts them automatically. Check the microphone permission for `localhost` if it never starts.
 
 ## Routes
 
 | Route | What it is |
 | --- | --- |
 | `/control` | Presenter panel: live preview, transcript, data, talk notes, decision log, rehearsal, settings |
-| `/stage` | The 1280×720 window OBS captures: webcam plus visuals, nothing else |
+| `/stage` | The window OBS captures: webcam plus visuals, nothing else |
 | `/gallery` | Every template rendered with sample data, for design work |
 
 ## Development
@@ -78,6 +165,9 @@ Halo's control window shows you a mirrored preview, so pointing at visuals feels
 ```bash
 npm test          # unit tests
 npm run typecheck
+npm run build
 ```
 
-See `CLAUDE.md` for the product rules and design system.
+See `CLAUDE.md` for the product rules, design system and architecture.
+
+Spreadsheet parsing uses SheetJS 0.18.5 from npm (the last version published there). For untrusted files, switch to the current build from the SheetJS CDN: `npm i https://cdn.sheetjs.com/xlsx-latest/xlsx-latest.tgz`.
