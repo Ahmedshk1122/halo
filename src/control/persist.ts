@@ -5,6 +5,8 @@ const KEY = "halo.v1";
 type Persisted = Pick<ControlState, "tables" | "glass" | "cameraDeviceId" | "reducedMotion"> & {
   provider?: ControlState["director"]["provider"];
   proactivity?: ControlState["director"]["proactivity"];
+  hands?: boolean;
+  faceZone?: boolean;
 };
 
 export function restore() {
@@ -24,6 +26,11 @@ export function restore() {
         ...(saved.provider === "claude" || saved.provider === "replay" ? { provider: saved.provider } : {}),
         ...(saved.proactivity === "quiet" || saved.proactivity === "balanced" || saved.proactivity === "eager" ? { proactivity: saved.proactivity } : {}),
       },
+      hands: {
+        ...s.hands,
+        ...(typeof saved.hands === "boolean" ? { enabled: saved.hands } : {}),
+        ...(typeof saved.faceZone === "boolean" ? { showFaceZone: saved.faceZone } : {}),
+      },
     }));
   } catch {
     // Private window or blocked storage: start fresh.
@@ -38,7 +45,9 @@ export function startPersisting() {
       s.cameraDeviceId === prev.cameraDeviceId &&
       s.reducedMotion === prev.reducedMotion &&
       s.director.provider === prev.director.provider &&
-      s.director.proactivity === prev.director.proactivity
+      s.director.proactivity === prev.director.proactivity &&
+      s.hands.enabled === prev.hands.enabled &&
+      s.hands.showFaceZone === prev.hands.showFaceZone
     ) {
       return;
     }
@@ -49,6 +58,8 @@ export function startPersisting() {
       reducedMotion: s.reducedMotion,
       provider: s.director.provider,
       proactivity: s.director.proactivity,
+      hands: s.hands.enabled,
+      faceZone: s.hands.showFaceZone,
     };
     try {
       localStorage.setItem(KEY, JSON.stringify(data));

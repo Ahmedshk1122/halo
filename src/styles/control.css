@@ -758,3 +758,48 @@ body.is-control {
   background: color-mix(in srgb, var(--ctl-accent) 12%, transparent);
   flex: none;
 }
+
+/* Preview: compact on data/notes/settings, presenter overlay */
+.preview.is-compact {
+  max-width: 520px;
+}
+.presenter-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 30;
+}
+.face-zone {
+  position: absolute;
+  border: 3px dashed rgba(255, 159, 10, 0.9);
+  border-radius: 40px;
+  background: rgba(255, 159, 10, 0.08);
+}
+.face-zone span {
+  position: absolute;
+  left: 18px;
+  top: 12px;
+  font: 600 24px var(--ctl-font);
+  color: rgba(255, 159, 10, 0.95);
+}
+.hand-pointer {
+  position: absolute;
+  overflow: visible;
+}
+.hand-dot {
+  fill: rgba(255, 255, 255, 0.9);
+  stroke: rgba(0, 0, 0, 0.35);
+  stroke-width: 2;
+}
+.hand-pointer.is-pinch .hand-dot {
+  fill: #ff9f0a;
+}
+.hand-pointer.is-idle .hand-dot {
+  fill: rgba(255, 255, 255, 0.5);
+}
+.hand-dwell {
+  fill: none;
+  stroke: #ff9f0a;
+  stroke-width: 6;
+  stroke-linecap: round;
+}

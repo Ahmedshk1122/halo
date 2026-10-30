@@ -203,12 +203,14 @@ export function toggleExpand(id: string) {
   const c = effectiveRect(v.frame, v.scale);
   const cx = c.x + c.w / 2;
   const cy = c.y + c.h / 2;
-  for (const scale of [1.45, 1.35, 1.25, 1.15]) {
+  // Grow about the center if there is room, else slide away from the face.
+  for (const scale of [1.45, 1.35, 1.25, 1.15, 1.1]) {
     const w = v.frame.w * scale;
     const h = v.frame.h * scale;
-    const box = clampToSafeArea({ x: cx - w / 2, y: cy - h / 2, w, h }, CONTENT_TOP);
-    if (!insideSafeArea(box, CONTENT_TOP)) continue;
-    if (s.keepOut && intersects(box, s.keepOut)) continue;
+    const centered = { x: cx - w / 2, y: cy - h / 2, w, h };
+    const candidates = [centered, { ...centered, x: c.x }, { ...centered, x: c.x + c.w - w }].map((b) => clampToSafeArea(b, CONTENT_TOP));
+    const box = candidates.find((b) => insideSafeArea(b, CONTENT_TOP) && !(s.keepOut && intersects(b, s.keepOut)));
+    if (!box) continue;
     store.set((st) => ({
       visuals: patchVisual(st, id, { expanded: true, scale, frame: frameFromEffective(box, v.frame, scale) }),
       onStage: [...st.onStage.filter((x) => x !== id), id],

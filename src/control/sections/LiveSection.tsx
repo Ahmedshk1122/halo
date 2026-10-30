@@ -37,7 +37,7 @@ export function LiveSection() {
 
   return (
     <>
-      <Preview interactive />
+      <Preview />
       <Group title="Stage">
         <Row label="Test card" detail="A static glass card, to check the stage window and OBS capture">
           <Switch

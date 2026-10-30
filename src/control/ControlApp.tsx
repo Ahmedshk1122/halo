@@ -3,6 +3,8 @@ import { useEffect, type ReactNode } from "react";
 import { useStore } from "./createStore";
 import { Inspector } from "./Inspector";
 import { startDirector } from "./director/setup";
+import { startHandSync } from "./hands/handController";
+import { Preview } from "./Preview";
 import { ListenButton, LatencyPill } from "./Toolbar";
 import { restore, startPersisting } from "./persist";
 import { RehearsalSection } from "./sections/RehearsalSection";
@@ -39,6 +41,7 @@ export function ControlApp() {
     startPersisting();
     startStageSync();
     startDirector();
+    startHandSync();
   }, []);
 
   const current = NAV.find((n) => n.id === section)!;
@@ -87,6 +90,7 @@ export function ControlApp() {
         </header>
         <div className="ctl-center">
           {section === "live" && <LiveSection />}
+          {(section === "data" || section === "notes" || section === "settings") && <Preview compact />}
           {section === "data" && <DataSection />}
           {section === "notes" && <NotesSection />}
           {section === "rehearsal" && <RehearsalSection />}

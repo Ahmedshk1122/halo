@@ -10,6 +10,7 @@ export function SettingsSection() {
   const cameraDeviceId = useStore(store, (s) => s.cameraDeviceId);
   const provider = useStore(store, (s) => s.director.provider);
   const proactivity = useStore(store, (s) => s.director.proactivity);
+  const hands = useStore(store, (s) => s.hands);
   const [cameras, setCameras] = useState<MediaDeviceInfo[]>([]);
 
   useEffect(() => {
@@ -58,6 +59,20 @@ export function SettingsSection() {
               </option>
             ))}
           </select>
+        </Row>
+      </Group>
+      <Group
+        title="Hands"
+        footer="Point and hold to ring part of a visual in orange. Pinch, hold and move to drag. A quick pinch expands or collapses. Visuals never cover your face."
+      >
+        <Row
+          label="Hand tracking"
+          detail={hands.status === "error" ? `Could not start: ${hands.detail}` : hands.status === "running" ? "Running in this window with MediaPipe" : hands.status === "loading" ? "Loading models…" : "Off"}
+        >
+          <Switch label="Hand tracking" checked={hands.enabled} onChange={(v) => store.set((s) => ({ hands: { ...s.hands, enabled: v } }))} />
+        </Row>
+        <Row label="Show face zone in preview" detail="The area visuals keep clear of. Only you see it.">
+          <Switch label="Show face zone" checked={hands.showFaceZone} onChange={(v) => store.set((s) => ({ hands: { ...s.hands, showFaceZone: v } }))} />
         </Row>
       </Group>
       <Group title="Appearance">

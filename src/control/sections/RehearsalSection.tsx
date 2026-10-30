@@ -59,7 +59,7 @@ export function RehearsalSection() {
   const current = progress?.line ?? null;
   return (
     <>
-      <Preview interactive />
+      <Preview />
       <Group
         title="Rehearsal"
         actions={

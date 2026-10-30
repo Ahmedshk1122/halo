@@ -132,6 +132,14 @@ export interface ControlState {
   };
   speech: { status: SpeechStatus; detail?: string; source: "live" | "rehearsal" | null };
   prepared: PreparedVisual[];
+  hands: {
+    enabled: boolean;
+    status: "off" | "loading" | "running" | "error";
+    detail?: string;
+    /** Fingertip in the presenter's mirrored frame, for the preview overlay only. */
+    pointer: { x: number; y: number; mode: "point" | "pinch" | "idle"; dwell: number } | null;
+    showFaceZone: boolean;
+  };
 }
 
 export const store = createStore<ControlState>({
@@ -153,4 +161,5 @@ export const store = createStore<ControlState>({
   director: { provider: "claude", proactivity: "balanced", inFlight: false, lastShowAt: null },
   speech: { status: "idle", source: null },
   prepared: [],
+  hands: { enabled: true, status: "off", pointer: null, showFaceZone: false },
 });
