@@ -7,11 +7,12 @@ import { ListenButton, LatencyPill } from "./Toolbar";
 import { restore, startPersisting } from "./persist";
 import { RehearsalSection } from "./sections/RehearsalSection";
 import { DataSection } from "./sections/DataSection";
+import { NotesSection } from "./sections/NotesSection";
 import { LiveSection } from "./sections/LiveSection";
 import { SettingsSection } from "./sections/SettingsSection";
 import { startStageSync } from "./stageSync";
 import { store, type Section } from "./state";
-import { Button, Empty } from "./ui/controls";
+import { Button } from "./ui/controls";
 import { useServerHealth } from "./useServerHealth";
 
 const NAV: { id: Section; label: string; icon: ReactNode }[] = [
@@ -87,7 +88,7 @@ export function ControlApp() {
         <div className="ctl-center">
           {section === "live" && <LiveSection />}
           {section === "data" && <DataSection />}
-          {section === "notes" && <Empty title="Talk notes">Coming in milestone 4.</Empty>}
+          {section === "notes" && <NotesSection />}
           {section === "rehearsal" && <RehearsalSection />}
           {section === "settings" && <SettingsSection />}
         </div>

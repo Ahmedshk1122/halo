@@ -4,7 +4,7 @@
 
 import { stem, words } from "../../../shared/reveal";
 import { TEMPLATE_LABELS, type TemplateId } from "../../../shared/visuals";
-import type { ControlState, VisualInstance } from "../state";
+import type { ControlState, PreparedVisual, VisualInstance } from "../state";
 
 export type Command =
   | { kind: "clear" }
@@ -108,4 +108,14 @@ export function matchVisual(query: string, candidates: VisualInstance[]): Visual
 /** All visuals, newest first. */
 export function allVisuals(s: ControlState): VisualInstance[] {
   return Object.values(s.visuals).sort((a, b) => b.createdAt - a.createdAt);
+}
+
+/** Best prepared visual (from talk notes) for a spoken reference. */
+export function matchPrepared(query: string, prepared: PreparedVisual[]): PreparedVisual | null {
+  const ready = prepared.filter((p) => p.visual);
+  const asVisuals = ready.map(
+    (p, i) => ({ id: `p${i + 1}`, title: p.title, aliases: p.spec.aliases, visual: { template: p.template } }) as unknown as VisualInstance,
+  );
+  const hit = matchVisual(query, asVisuals);
+  return hit ? ready[Number(hit.id.slice(1)) - 1] : null;
 }

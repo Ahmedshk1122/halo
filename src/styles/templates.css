@@ -168,3 +168,375 @@
   gap: 2px;
   min-width: 0;
 }
+
+.svg-bar-value {
+  font: 600 26px var(--font-system);
+  font-variant-numeric: tabular-nums;
+}
+.svg-axis.is-strong {
+  fill: var(--label-2);
+}
+.tpl-hero-sm {
+  font-size: var(--type-hero-sm);
+}
+
+/* Comparison: nested panes at a 14px inset use the concentric radius. */
+.tpl-comparison {
+  box-sizing: border-box;
+  height: 100%;
+  padding: var(--inset-nested);
+  display: flex;
+  flex-direction: column;
+}
+.tpl-comparison-head {
+  padding: 22px 22px 18px;
+}
+.tpl-comparison-panes {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--inset-nested);
+}
+.tpl-comparison-pane {
+  border-radius: var(--radius-nested);
+  padding: 26px 28px;
+  background: var(--fill-2);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.tpl-comparison-pane.is-favored {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+.tpl-comparison-pane.is-favored > .t-body-strong {
+  color: var(--accent-text);
+}
+.tpl-comparison-value {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin: 2px 0 4px;
+}
+.tpl-comparison-points {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.tpl-comparison-points li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.tpl-comparison-points svg {
+  flex: none;
+  color: var(--label-3);
+}
+.is-favored .tpl-comparison-points svg {
+  color: var(--accent);
+}
+
+/* Roadmap */
+.tpl-roadmap-track {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(var(--cols), 1fr);
+  margin-top: 4px;
+}
+.tpl-roadmap-rail {
+  position: absolute;
+  left: 11px;
+  right: calc(100% / var(--cols) - 11px);
+  top: 54px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--fill);
+  overflow: hidden;
+}
+.tpl-roadmap-rail-fill {
+  width: 100%;
+  height: 100%;
+  background: var(--accent);
+  transform-origin: 0 50%;
+}
+.tpl-roadmap-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  border-radius: 14px;
+  padding-right: 24px;
+}
+.tpl-roadmap-when {
+  height: 30px;
+  font-size: var(--type-footnote);
+  font-weight: 600;
+  color: var(--accent-text);
+  margin-bottom: 12px;
+}
+.tpl-roadmap-node {
+  position: relative;
+  z-index: 1;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 5px var(--glass-bg-solid);
+  margin-bottom: 18px;
+}
+.tpl-roadmap-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Process flow */
+.tpl-process-row {
+  display: flex;
+  align-items: stretch;
+}
+.tpl-process-step {
+  flex: 0 0 260px;
+  box-sizing: border-box;
+  padding: 24px;
+  border-radius: 20px;
+  background: var(--fill-2);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.tpl-process-step .tpl-icon-tile {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  margin-bottom: 12px;
+}
+.tpl-process-arrow {
+  flex: 0 0 48px;
+  display: grid;
+  place-items: center;
+  color: var(--label-3);
+}
+
+/* UI sketch: a wireframe window nested at a 14px inset */
+.tpl-sketch {
+  box-sizing: border-box;
+  height: 100%;
+  padding: var(--inset-nested);
+  display: flex;
+  flex-direction: column;
+}
+.tpl-sketch-head {
+  padding: 22px 22px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.tpl-sketch-window {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-nested);
+  background: var(--glass-bg-solid);
+  box-shadow: 0 0 0 1px var(--separator);
+  overflow: hidden;
+}
+.tpl-sketch-bar {
+  position: relative;
+  height: 44px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-bottom: 1px solid var(--separator);
+  background: var(--fill-2);
+}
+.tpl-sketch-dots {
+  position: absolute;
+  left: 18px;
+  display: flex;
+  gap: 8px;
+}
+.tpl-sketch-dots i {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--fill);
+}
+.tpl-sketch-window-title {
+  font-size: var(--type-min);
+  font-weight: 600;
+  color: var(--label-2);
+}
+.tpl-sketch-body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+.tpl-sketch-sidebar {
+  flex: 0 0 168px;
+  padding: 16px 10px;
+  border-right: 1px solid var(--separator);
+  background: var(--fill-2);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.tpl-sketch-nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border-radius: 10px;
+  font-size: var(--type-min);
+  font-weight: 500;
+  color: var(--label-2);
+}
+.tpl-sketch-nav.is-on {
+  background: var(--fill);
+  color: var(--label);
+}
+.tpl-sketch-nav-icon {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  background: var(--fill);
+  flex: none;
+}
+.tpl-sketch-main {
+  flex: 1;
+  min-width: 0;
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.tpl-sketch-heading {
+  font-size: var(--type-body);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.tpl-sketch-block {
+  border-radius: 14px;
+}
+.tpl-sketch-block.is-highlight {
+  box-shadow: 0 0 0 3px var(--bg-ring, transparent), 0 0 0 3px var(--orange);
+  padding: 10px;
+  margin: -10px;
+}
+.tpl-sketch-label {
+  font-size: var(--type-min);
+  font-weight: 600;
+  color: var(--label-2);
+  margin-bottom: 10px;
+}
+.tpl-sketch-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.tpl-sketch-card {
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--fill-2);
+  box-shadow: inset 0 0 0 1px var(--separator);
+}
+.tpl-sketch-thumb {
+  height: 54px;
+  padding: 12px 14px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+.tpl-sketch-thumb i {
+  display: block;
+  height: 8px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--accent) 38%, transparent);
+  width: 70%;
+}
+.tpl-sketch-thumb i + i {
+  width: 45%;
+}
+.tpl-sketch-card-title {
+  padding: 8px 12px 10px;
+  font-size: var(--type-min);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tpl-sketch-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.tpl-sketch-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: var(--type-min);
+  font-weight: 500;
+}
+.tpl-sketch-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--fill);
+  flex: none;
+}
+.tpl-sketch-line {
+  margin-left: auto;
+  width: 60px;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--fill);
+}
+.tpl-sketch-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.tpl-sketch-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.tpl-sketch-field-label {
+  font-size: var(--type-min);
+  color: var(--label-2);
+}
+.tpl-sketch-input {
+  height: 36px;
+  border-radius: 10px;
+  box-shadow: inset 0 0 0 1.5px var(--separator);
+}
+.tpl-sketch-button {
+  display: inline-flex;
+  align-items: center;
+  height: 44px;
+  padding: 0 22px;
+  border-radius: 22px;
+  background: var(--accent);
+  color: #fff;
+  font-size: var(--type-min);
+  font-weight: 600;
+}
+.tpl-sketch-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 44px;
+  padding: 0 14px;
+  border-radius: 12px;
+  background: var(--fill-2);
+  color: var(--label-3);
+  font-size: var(--type-min);
+}
+.tpl-sketch-text {
+  font-size: var(--type-min);
+  color: var(--label-2);
+}

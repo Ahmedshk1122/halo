@@ -737,3 +737,24 @@ body.is-control {
   text-overflow: ellipsis;
   font-size: 12px;
 }
+.prepared-label {
+  display: inline-flex;
+  gap: 8px;
+  align-items: baseline;
+}
+.notice:not(.is-good):not(.is-bad) {
+  color: var(--ctl-label-2);
+}
+.history-row {
+  gap: 10px;
+}
+.history-icon {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  color: var(--ctl-accent);
+  background: color-mix(in srgb, var(--ctl-accent) 12%, transparent);
+  flex: none;
+}

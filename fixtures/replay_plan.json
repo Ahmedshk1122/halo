@@ -1,0 +1,184 @@
+{
+  "_comment": "Offline replay of a planner response for samples/talk_notes.md (test double, not Claude output).",
+  "calls": [
+    {
+      "name": "prepare_metric",
+      "input": {
+        "prepared_id": "activation-metric",
+        "when": "when the activation headline is stated",
+        "title": "Activation rate",
+        "aliases": [
+          "activation",
+          "headline"
+        ],
+        "caption": "Weekly, this quarter",
+        "value": {
+          "table": "q3_metrics",
+          "column": "activation_rate",
+          "pick": "last",
+          "match_column": "",
+          "match_value": ""
+        },
+        "baseline": {
+          "table": "q3_metrics",
+          "column": "activation_rate",
+          "pick": "first",
+          "match_column": "",
+          "match_value": ""
+        },
+        "trend": {
+          "table": "q3_metrics",
+          "x": "week",
+          "y": "activation_rate",
+          "filter_column": "",
+          "filter_value": ""
+        },
+        "good_direction": "up"
+      }
+    },
+    {
+      "name": "prepare_funnel",
+      "input": {
+        "prepared_id": "onboarding-funnel",
+        "when": "when the drop-off at workspace setup comes up",
+        "title": "Onboarding funnel",
+        "aliases": [
+          "funnel",
+          "drop-off",
+          "workspace step"
+        ],
+        "subtitle": "Share of sign-ups reaching each step",
+        "steps": {
+          "table": "onboarding_funnel",
+          "x": "step",
+          "y": "share_of_signups",
+          "filter_column": "",
+          "filter_value": ""
+        },
+        "highlight_step": "Set up workspace"
+      }
+    },
+    {
+      "name": "prepare_strategy",
+      "input": {
+        "prepared_id": "three-moves",
+        "when": "when the three moves are announced",
+        "title": "Three moves",
+        "aliases": [
+          "moves",
+          "plan",
+          "proposal"
+        ],
+        "reveal": "progressive",
+        "points": [
+          {
+            "icon": "layout-template",
+            "text": "Templates, not a blank page",
+            "detail": "",
+            "cue": "templates blank page"
+          },
+          {
+            "icon": "download",
+            "text": "Import from existing tools",
+            "detail": "",
+            "cue": "imports tools"
+          },
+          {
+            "icon": "user-plus",
+            "text": "Invite later, not first",
+            "detail": "",
+            "cue": "invites later"
+          }
+        ]
+      }
+    },
+    {
+      "name": "prepare_ui_sketch",
+      "input": {
+        "prepared_id": "templates-screen",
+        "when": "when they ask the audience to picture opening the app",
+        "title": "Templates on first open",
+        "aliases": [
+          "templates screen",
+          "sketch",
+          "first screen"
+        ],
+        "caption": "",
+        "window_title": "New workspace",
+        "sidebar": [
+          "Home",
+          "Projects",
+          "Templates",
+          "Settings"
+        ],
+        "heading": "Start with a template",
+        "blocks": [
+          {
+            "kind": "grid",
+            "label": "Ready-made templates",
+            "items": [
+              "Product roadmap",
+              "Sprint planning",
+              "Team wiki",
+              "Launch plan"
+            ],
+            "highlight": true
+          },
+          {
+            "kind": "button",
+            "label": "Start from scratch",
+            "items": [],
+            "highlight": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "prepare_roadmap",
+      "input": {
+        "prepared_id": "rollout",
+        "when": "when the rollout months are described",
+        "title": "Rollout",
+        "aliases": [
+          "roadmap",
+          "timeline",
+          "rollout"
+        ],
+        "reveal": "progressive",
+        "items": [
+          {
+            "when": "November",
+            "label": "Templates",
+            "detail": "",
+            "cue": "templates november"
+          },
+          {
+            "when": "December",
+            "label": "Imports",
+            "detail": "",
+            "cue": "imports december"
+          },
+          {
+            "when": "January",
+            "label": "Invites move later",
+            "detail": "",
+            "cue": "january invites"
+          }
+        ]
+      }
+    },
+    {
+      "name": "prepare_statement",
+      "input": {
+        "prepared_id": "the-ask",
+        "when": "at the closing ask",
+        "title": "The ask",
+        "aliases": [
+          "ask"
+        ],
+        "kicker": "The ask",
+        "text": "Back the plan and ship templates in November"
+      }
+    }
+  ]
+}

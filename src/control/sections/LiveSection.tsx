@@ -7,6 +7,7 @@ import { Preview } from "../Preview";
 import { clearStage, removeVisual, setReveal, showVisual } from "../stageActions";
 import { store } from "../state";
 import { Group, Row, Segmented, Switch } from "../ui/controls";
+import { History } from "./History";
 
 const TEST_CARD: RStatement = {
   template: "statement",
@@ -79,6 +80,7 @@ export function LiveSection() {
           </button>
         </Row>
       </Group>
+      <History />
     </>
   );
 }

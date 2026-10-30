@@ -53,7 +53,7 @@ export function templateSize(v: ResolvedVisual): Size {
     case "comparison": {
       const rows = Math.max(v.a.points.length, v.b.points.length);
       const hasValue = !!(v.a.value || v.b.value);
-      return { w: 1120, h: 150 + (hasValue ? 116 : 0) + rows * 46 + 24 };
+      return { w: 1120, h: 14 + 22 + TITLE_LINE + 18 + 26 + BODY_LINE + (hasValue ? 8 + 96 + 6 : 0) + 18 + rows * 44 - 9 + 26 + 14 };
     }
     case "strategy": {
       const textW = 600 - PAD * 2 - 64 - 22;
@@ -65,12 +65,29 @@ export function templateSize(v: ResolvedVisual): Size {
       }
       return { w: 600, h: h - 22 + PAD };
     }
-    case "roadmap":
-      return { w: Math.min(1400, 260 * Math.max(3, v.items.length) + 120), h: 330 };
-    case "process":
-      return { w: Math.min(1500, 290 * Math.max(3, v.steps.length) + 40), h: 300 };
+    case "roadmap": {
+      const n = Math.max(1, v.items.length);
+      const col = n <= 3 ? 340 : n === 4 ? 300 : 250;
+      const textW = col - 24;
+      const labelLines = Math.max(1, ...v.items.map((i) => estimateLines(i.label, 28, textW)));
+      const detailLines = Math.max(0, ...v.items.map((i) => (i.detail ? estimateLines(i.detail, 24, textW) : 0)));
+      return {
+        w: PAD * 2 + Math.max(2, n) * col,
+        h: PAD * 2 + TITLE_LINE + 20 + 4 + 30 + 12 + 22 + 18 + labelLines * BODY_LINE + detailLines * 30,
+      };
+    }
+    case "process": {
+      const n = Math.max(1, v.steps.length);
+      const inner = 260 - 48;
+      const labelLines = Math.max(1, ...v.steps.map((s) => estimateLines(s.label, 28, inner)));
+      const detailLines = Math.max(0, ...v.steps.map((s) => (s.detail ? estimateLines(s.detail, 24, inner) : 0)));
+      return {
+        w: PAD * 2 + Math.max(2, n) * 260 + (Math.max(2, n) - 1) * 48,
+        h: PAD * 2 + TITLE_LINE + 20 + 24 + 56 + 12 + labelLines * BODY_LINE + detailLines * 30 + 4 + 24,
+      };
+    }
     case "ui_sketch":
-      return { w: 680, h: 540 };
+      return { w: 720, h: 620 + (v.caption ? 31 : 0) };
     case "statement": {
       const innerW = 1100 - 88;
       const lines = Math.min(3, estimateLines(v.text, 56, innerW));

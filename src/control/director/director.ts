@@ -22,7 +22,7 @@ import {
 } from "../stageActions";
 import { onStageRendered } from "../stageSync";
 import { store, type DecisionEntry, type DecisionTrigger, type VisualInstance } from "../state";
-import { allVisuals, matchVisual, parseCommand, type ParsedCommand } from "./commands";
+import { allVisuals, matchPrepared, matchVisual, parseCommand, type ParsedCommand } from "./commands";
 import { ServerDirector, type DirectorProvider } from "./providers";
 
 export const TRANSCRIPT_WINDOW_SEC = 60;
@@ -169,6 +169,27 @@ class Director {
       this.pending = null;
       if (next) void this.run(next);
     }
+  }
+
+  /** Show a visual prepared from talk notes right away (panel button or voice command). */
+  showPrepared(id: string, reason: string, from?: { trigger: DecisionTrigger; said: string; label?: string; speechEndAt: number }) {
+    const t = now();
+    const logId = this.log({
+      trigger: from?.trigger ?? "request",
+      source: "command",
+      action: "show",
+      outcome: "pending",
+      reason,
+      beat: store.get().arc.beat,
+      said: from?.said ?? "",
+      label: from?.label,
+      speechEndAt: from?.speechEndAt ?? t,
+    });
+    const s = store.get();
+    this.apply(
+      { action: "show", reason, beat: s.arc.beat, arc: s.arc.summary, targetIds: [], tuckIds: [], preparedId: id, visual: null },
+      { logId, speechEndAt: from?.speechEndAt ?? t, explicit: true, cueFrom: (from?.speechEndAt ?? t) - 15_000 },
+    );
   }
 
   /** Ask the director for something specific (from a voice command or the panel). */
@@ -415,6 +436,12 @@ class Director {
           mark(`recall ${existing.id}`);
           const logId = this.log({ ...logBase, action: "recall", outcome: "pending", reason: `You asked for ${existing.title}` });
           this.recall(existing, logId, e.at);
+          return true;
+        }
+        const prepared = matchPrepared(c.query, s.prepared);
+        if (prepared) {
+          mark(`show ${prepared.id}`);
+          this.showPrepared(prepared.id, `You asked for ${prepared.title}`, { trigger: "command", said: e.text, label: e.label, speechEndAt: e.at });
           return true;
         }
         mark("request");
