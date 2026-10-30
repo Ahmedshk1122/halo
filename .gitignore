@@ -1,0 +1,10 @@
+node_modules
+dist
+.env
+.env.local
+*.log
+.DS_Store
+# MediaPipe runtime + models are copied/downloaded by `npm install` / `npm run setup:mediapipe`
+public/mediapipe/
+# Acceptance run output
+artifacts/

@@ -1,0 +1,145 @@
+/*
+ * Halo design tokens for everything that appears on the video.
+ * All sizes are at 1080p: the stage is a fixed 1920×1080 canvas, scaled to its window.
+ * Rules live in CLAUDE.md ("Look and feel"). Keep this file the single source.
+ */
+
+:root {
+  --font-system: -apple-system, BlinkMacSystemFont, system-ui, "Helvetica Neue", Helvetica, Arial, sans-serif;
+
+  /* Apple system colors, used for meaning only. */
+  --blue: #0a84ff;
+  --green: #30d158;
+  --red: #ff453a;
+  --orange: #ff9f0a; /* targets and highlights only */
+
+  /* Type scale (1080p). Nothing below 22px. */
+  --type-hero: 144px;
+  --type-hero-sm: 96px;
+  --type-display: 56px;
+  --type-title: 40px;
+  --type-body: 28px;
+  --type-footnote: 24px;
+  --type-min: 22px;
+
+  /* Shape */
+  --radius-card: 28px;
+  --pad-card: 36px;
+  --inset-nested: 14px; /* nested panes sit this far inside the card edge */
+  --radius-nested: calc(var(--radius-card) - var(--inset-nested)); /* concentric */
+
+  /* Motion (mirrored in src/templates/motion.ts) */
+  --spring-stiffness: 260;
+  --spring-damping: 30;
+}
+
+/* Glass material. data-glass is set on every visual and chip. */
+.halo-glass {
+  --glass-bg: rgba(255, 255, 255, 0.72);
+  --glass-border: rgba(255, 255, 255, 0.5);
+  --label: rgba(0, 0, 0, 0.88);
+  --label-2: rgba(60, 60, 67, 0.74);
+  --label-3: rgba(60, 60, 67, 0.46);
+  --fill: rgba(120, 120, 128, 0.14);
+  --fill-2: rgba(120, 120, 128, 0.08);
+  --separator: rgba(60, 60, 67, 0.16);
+  --grid: rgba(60, 60, 67, 0.12);
+  --highlight-inset: rgba(255, 255, 255, 0.55);
+  /* Colored text on light glass is deepened slightly so it survives video compression. */
+  --blue-text: color-mix(in srgb, var(--blue) 82%, black);
+  --green-text: color-mix(in srgb, var(--green) 72%, black);
+  --red-text: color-mix(in srgb, var(--red) 86%, black);
+  --orange-text: color-mix(in srgb, var(--orange) 76%, black);
+
+  position: relative;
+  font-family: var(--font-system);
+  color: var(--label);
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  backdrop-filter: blur(40px) saturate(180%);
+  border: 0.5px solid var(--glass-border);
+  border-radius: var(--radius-card);
+  box-shadow:
+    0 40px 90px -24px rgba(0, 0, 0, 0.38),
+    0 12px 28px -10px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 var(--highlight-inset);
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "kern" 1;
+  overflow: hidden;
+}
+
+.halo-glass[data-glass="dark"] {
+  --glass-bg: rgba(28, 28, 30, 0.6);
+  --label: rgba(255, 255, 255, 0.95);
+  --label-2: rgba(235, 235, 245, 0.72);
+  --label-3: rgba(235, 235, 245, 0.42);
+  --fill: rgba(120, 120, 128, 0.3);
+  --fill-2: rgba(120, 120, 128, 0.18);
+  --separator: rgba(84, 84, 88, 0.55);
+  --grid: rgba(235, 235, 245, 0.12);
+  --highlight-inset: rgba(255, 255, 255, 0.12);
+  --blue-text: var(--blue);
+  --green-text: var(--green);
+  --red-text: var(--red);
+  --orange-text: var(--orange);
+}
+
+/* Accent: one per visual. Set data-accent on the card. */
+.halo-glass[data-accent="blue"] { --accent: var(--blue); --accent-text: var(--blue-text); }
+.halo-glass[data-accent="green"] { --accent: var(--green); --accent-text: var(--green-text); }
+.halo-glass[data-accent="red"] { --accent: var(--red); --accent-text: var(--red-text); }
+
+/* Typography roles */
+.t-hero {
+  font-size: var(--type-hero);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.035em;
+  font-variant-numeric: tabular-nums;
+}
+.t-display {
+  font-size: var(--type-display);
+  font-weight: 600;
+  line-height: 1.08;
+  letter-spacing: -0.022em;
+}
+.t-title {
+  font-size: var(--type-title);
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+}
+.t-body {
+  font-size: var(--type-body);
+  font-weight: 500;
+  line-height: 1.25;
+  letter-spacing: -0.005em;
+}
+.t-body-strong {
+  font-size: var(--type-body);
+  font-weight: 600;
+  line-height: 1.22;
+  letter-spacing: -0.008em;
+}
+.t-footnote {
+  font-size: var(--type-footnote);
+  font-weight: 500;
+  line-height: 1.25;
+  color: var(--label-2);
+}
+.t-min {
+  font-size: var(--type-min);
+  font-weight: 500;
+  line-height: 1.2;
+  color: var(--label-2);
+}
+.t-secondary { color: var(--label-2); }
+.t-num { font-variant-numeric: tabular-nums; }
+
+/* The orange target ring drawn around a pointed-at part. */
+.halo-target-ring {
+  position: absolute;
+  pointer-events: none;
+  border: 4px solid var(--orange);
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--orange) 22%, transparent);
+}

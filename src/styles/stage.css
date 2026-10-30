@@ -1,0 +1,141 @@
+/* Stage canvas: fixed 1920×1080, scaled by StageViewport. */
+
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+}
+
+body.is-stage {
+  background: #000;
+  overflow: hidden;
+  cursor: none; /* OBS captures this window: no cursor, ever */
+  user-select: none;
+}
+
+.stage-viewport {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.stage-root {
+  width: 100vw;
+  height: 100vh;
+  background: #000;
+}
+
+.stage-scaler {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+}
+
+.stage-canvas {
+  position: relative;
+  width: 1920px;
+  height: 1080px;
+  overflow: hidden;
+  background: #111;
+  font-family: var(--font-system);
+}
+
+.stage-video,
+.stage-visuals,
+.stage-chips {
+  position: absolute;
+  inset: 0;
+}
+
+.stage-visuals,
+.stage-chips {
+  pointer-events: none;
+}
+
+.camera-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  background: #111;
+}
+
+.camera-missing {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 90% at 30% 20%, #3a3f47 0%, #1b1d22 55%, #0e0f12 100%);
+}
+
+.visual-frame {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 50% 50%;
+  will-change: transform;
+}
+
+.visual-glass {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.visual-content {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.target-ring-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* Interactive only in the control preview (mouse fallback). */
+.is-interactive .stage-visuals,
+.is-interactive .stage-chips {
+  pointer-events: none;
+}
+.is-interactive .visual-frame,
+.is-interactive .stage-chip {
+  pointer-events: auto;
+  cursor: grab;
+}
+.is-interactive .visual-frame:active {
+  cursor: grabbing;
+}
+
+/* Tucked chips */
+.stage-chip {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 22px;
+  border-radius: 28px;
+  box-sizing: border-box;
+  font: 600 24px/1 var(--font-system);
+  letter-spacing: -0.01em;
+  color: var(--label);
+  transform-origin: 50% 50%;
+  box-shadow:
+    0 16px 40px -16px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 var(--highlight-inset);
+}
+.stage-chip-icon {
+  display: inline-flex;
+  color: var(--label-2);
+  flex: none;
+}
+.stage-chip-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 300px;
+}

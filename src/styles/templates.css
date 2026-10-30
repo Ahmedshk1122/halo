@@ -1,0 +1,19 @@
+/* Template layouts. Sizes at 1080p; each template fills the box from shared/layout.ts. */
+
+/* Statement */
+.tpl-statement {
+  box-sizing: border-box;
+  height: 100%;
+  padding: 44px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 14px;
+}
+.tpl-statement-kicker {
+  color: var(--accent-text);
+}
+.tpl-statement-text {
+  max-width: 1012px;
+  text-wrap: balance;
+}
