@@ -35,6 +35,7 @@ This repo is the web prototype: a Vite + React + TypeScript app plus a tiny loca
 - Director (runs on every speech segment) defaults to the fast model `claude-haiku-5-5` at low effort. Planner (one pass over talk notes) defaults to `claude-opus-5-5`.
 - Structured output uses tool use with `strict: true` schemas. Strict schemas: keep every property required, no nullable/union types (limit is 16 across a request), `additionalProperties: false`. Absent values are empty strings, empty arrays, or `pick: "none"`.
 - Keep the system prompt and tool list byte-stable so they cache; put volatile context in the user message.
+- Optional provider: Google Gemini (`HALO_PROVIDER=gemini`, `server/llm/gemini.ts`) behind the same `LLMClient` interface, using the same tool schemas as JSON-schema function declarations. Free-tier pacing comes from `/api/health` limits: minimum interval between director calls, no mid-sentence triggers, and a cooldown when the provider returns a retry delay.
 
 ## Look and feel: as if Apple built it
 

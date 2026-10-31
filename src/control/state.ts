@@ -132,6 +132,10 @@ export interface ControlState {
   };
   speech: { status: SpeechStatus; detail?: string; source: "live" | "rehearsal" | null };
   prepared: PreparedVisual[];
+  /** Messages for data files that could not be loaded. */
+  dataErrors: string[];
+  /** Which model provider the local server uses (for labels). */
+  ai: { provider: "anthropic" | "gemini" | null };
   hands: {
     enabled: boolean;
     status: "off" | "loading" | "running" | "error";
@@ -161,5 +165,7 @@ export const store = createStore<ControlState>({
   director: { provider: "claude", proactivity: "balanced", inFlight: false, lastShowAt: null },
   speech: { status: "idle", source: null },
   prepared: [],
+  ai: { provider: null },
+  dataErrors: [],
   hands: { enabled: true, status: "off", pointer: null, showFaceZone: false },
 });

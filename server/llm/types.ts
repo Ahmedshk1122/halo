@@ -29,7 +29,17 @@ export interface ToolCallResult {
   usage: { input: number; output: number; cacheRead: number; cacheWrite: number };
 }
 
+export interface LLMError {
+  status: number;
+  message: string;
+  /** Seconds to wait before the next request, when the provider says so (rate limits). */
+  retryAfterSec?: number;
+}
+
 export interface LLMClient {
+  readonly provider: "anthropic" | "gemini";
   readonly available: boolean;
   callTools(req: ToolCallRequest): Promise<ToolCallResult>;
+  /** Human-readable error for the decision log, without leaking request details. */
+  describeError(err: unknown): LLMError;
 }

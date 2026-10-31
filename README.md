@@ -133,6 +133,17 @@ Models are set in `.env`:
 - The director's rules, tools and data catalog are prompt-cached, and pre-warmed when you start listening. The cache is refreshed every four minutes while you listen.
 - On models that support it (Opus 5.5, Sonnet 5.5), requests use Anthropic's server-side refusal fallback (`fallbacks: "default"`). The default Haiku director does not need it.
 
+### Using Gemini instead
+
+Halo can also run on Google Gemini, which has a free tier. In `.env`:
+
+```
+HALO_PROVIDER=gemini
+GEMINI_API_KEY=your-key
+```
+
+It uses the same tools and grounding. Defaults: `gemini-flash-lite-latest` for the director and planner (change with `GEMINI_DIRECTOR_MODEL` / `GEMINI_PLANNER_MODEL`). Free-tier keys allow only a few requests a minute, so with Gemini Halo spaces director calls at least 6 seconds apart (`GEMINI_MIN_INTERVAL_MS`), decides at the end of each sentence rather than mid-sentence, and waits whenever Google asks it to slow down. Visuals can arrive a few seconds later than with Claude, and Halo's prompts were written for Claude, so choices may differ. Check Google's terms for how free-tier requests may be used.
+
 ## Settings
 
 - **How proactive Halo is:** quiet, balanced or eager. This also sets the minimum gap between new visuals (10, 6 or 4 seconds).
@@ -146,6 +157,8 @@ Models are set in `.env`:
 - Data, notes and settings stay in this browser's local storage.
 
 ## Troubleshooting
+
+- **"Your credit balance is too low"** in the decision log: the Anthropic account has no credit. Add credit, or use Gemini (above).
 
 - **The stage freezes in OBS when another window covers it.** Start Chrome with the flags above (`./scripts/open-chrome.sh`).
 - **"No API key in .env"** in the sidebar. Put your key in `.env` and restart `npm run dev`.

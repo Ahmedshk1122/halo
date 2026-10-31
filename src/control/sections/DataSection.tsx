@@ -1,37 +1,18 @@
 import { FileSpreadsheet, Upload } from "lucide-react";
 import { useRef, useState } from "react";
 import { formatLabel, formatValue, type DataTable } from "../../../shared/data";
-import { loadDataFile } from "../../data/loadFile";
 import { sampleTables } from "../../data/samples";
+import { addTables, importDataFiles } from "../dataImport";
 import { useStore } from "../createStore";
 import { store } from "../state";
 import { Button, Empty, Group, Pill } from "../ui/controls";
 
-function addTables(incoming: DataTable[]) {
-  store.set((s) => {
-    const byName = new Map(s.tables.map((t) => [t.name, t]));
-    for (const t of incoming) byName.set(t.name, t);
-    return { tables: [...byName.values()] };
-  });
-}
-
 export function DataSection() {
   const tables = useStore(store, (s) => s.tables);
   const [over, setOver] = useState(false);
-  const [errors, setErrors] = useState<string[]>([]);
+  const errors = useStore(store, (s) => s.dataErrors);
   const input = useRef<HTMLInputElement>(null);
-
-  const load = async (files: FileList | File[]) => {
-    const errs: string[] = [];
-    for (const f of Array.from(files)) {
-      try {
-        addTables(await loadDataFile(f));
-      } catch (e) {
-        errs.push((e as Error).message);
-      }
-    }
-    setErrors(errs);
-  };
+  const load = (files: FileList | File[]) => void importDataFiles(files);
 
   return (
     <>
@@ -44,8 +25,9 @@ export function DataSection() {
         onDragLeave={() => setOver(false)}
         onDrop={(e) => {
           e.preventDefault();
+          e.stopPropagation();
           setOver(false);
-          void load(e.dataTransfer.files);
+          load(e.dataTransfer.files);
         }}
         onClick={() => input.current?.click()}
         role="button"
@@ -61,7 +43,7 @@ export function DataSection() {
           multiple
           hidden
           onChange={(e) => {
-            if (e.target.files) void load(e.target.files);
+            if (e.target.files) load(e.target.files);
             e.target.value = "";
           }}
         />

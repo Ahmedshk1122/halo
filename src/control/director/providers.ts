@@ -18,8 +18,11 @@ export class ServerDirector implements DirectorProvider {
       headers: { "content-type": "application/json" },
       body: JSON.stringify(req),
     });
-    const body = (await res.json().catch(() => ({}))) as DirectorResponse & { error?: string };
-    if (!res.ok || body.error) throw new Error(body.error ?? `Server error ${res.status}`);
+    const body = (await res.json().catch(() => ({}))) as DirectorResponse & { error?: string; retryAfterSec?: number };
+    if (!res.ok || body.error) {
+      // retryAfterSec: the provider asked to slow down; the director waits before its next request.
+      throw Object.assign(new Error(body.error ?? `Server error ${res.status}`), { retryAfterSec: body.retryAfterSec });
+    }
     return body;
   }
 }

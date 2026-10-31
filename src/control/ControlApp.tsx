@@ -6,6 +6,7 @@ import { startDirector } from "./director/setup";
 import { startHandSync } from "./hands/handController";
 import { Preview } from "./Preview";
 import { ListenButton, LatencyPill } from "./Toolbar";
+import { catchWindowDrops } from "./dataImport";
 import { restore, startPersisting } from "./persist";
 import { RehearsalSection } from "./sections/RehearsalSection";
 import { DataSection } from "./sections/DataSection";
@@ -15,7 +16,7 @@ import { SettingsSection } from "./sections/SettingsSection";
 import { startStageSync } from "./stageSync";
 import { store, type Section } from "./state";
 import { Button } from "./ui/controls";
-import { useServerHealth } from "./useServerHealth";
+import { aiName, useServerHealth } from "./useServerHealth";
 
 const NAV: { id: Section; label: string; icon: ReactNode }[] = [
   { id: "live", label: "Live", icon: <Radio size={16} strokeWidth={1.75} /> },
@@ -29,6 +30,9 @@ export function openStageWindow() {
   window.open("/stage", "halo-stage", "popup=yes,width=1280,height=720");
 }
 
+// React StrictMode runs effects twice in development; start services only once.
+let booted = false;
+
 export function ControlApp() {
   const section = useStore(store, (s) => s.section);
   const stage = useStore(store, (s) => s.stage);
@@ -37,11 +41,14 @@ export function ControlApp() {
   useEffect(() => {
     document.title = "Halo";
     document.body.classList.add("is-control");
+    if (booted) return;
+    booted = true;
     restore();
     startPersisting();
     startStageSync();
     startDirector();
     startHandSync();
+    catchWindowDrops();
   }, []);
 
   const current = NAV.find((n) => n.id === section)!;
@@ -73,7 +80,7 @@ export function ControlApp() {
           </div>
           <div className="status-line">
             <span className={`dot ${health.state === "ok" ? (health.hasKey ? "is-good" : "is-warn") : "is-bad"}`} />
-            {health.state === "ok" ? (health.hasKey ? `Claude ready · ${health.directorModel}` : "No API key in .env") : "Server offline"}
+            {health.state === "ok" ? (health.hasKey ? `${aiName(health.provider)} ready · ${health.directorModel}` : "No API key in .env") : "Server offline"}
           </div>
         </div>
       </aside>

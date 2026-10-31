@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import type { LLMClient, ToolCall, ToolCallRequest, ToolCallResult } from "./types";
+import type { LLMClient, LLMError, ToolCall, ToolCallRequest, ToolCallResult } from "./types";
 
 // Models that reject a forced tool_choice ("any"/"tool"); they get "auto" plus
 // the prompt's "call exactly one tool" instruction instead.
@@ -8,6 +8,7 @@ const NO_FORCED_TOOL_CHOICE = /^claude-(opus-5-5|sonnet-5-5|fable-5-1|mythos-5-1
 const FALLBACK_DEFAULT = /^claude-(fable-5-1|opus-5-5|opus-5$|sonnet-5-5)/;
 
 export class AnthropicLLM implements LLMClient {
+  readonly provider = "anthropic" as const;
   private client: Anthropic | null;
 
   constructor(apiKey: string) {
@@ -72,10 +73,14 @@ export class AnthropicLLM implements LLMClient {
       },
     };
   }
+
+  describeError(err: unknown): LLMError {
+    return describeAnthropicError(err);
+  }
 }
 
 /** Human-readable message for an API error, without leaking request details. */
-export function describeLLMError(err: unknown): { status: number; message: string } {
+function describeAnthropicError(err: unknown): LLMError {
   if (err instanceof Anthropic.AuthenticationError) return { status: 401, message: "Anthropic rejected the API key" };
   if (err instanceof Anthropic.RateLimitError) return { status: 429, message: "Rate limited by the Anthropic API" };
   if (err instanceof Anthropic.BadRequestError) return { status: 400, message: `Bad request: ${err.message}` };

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { listCameras } from "../../stage/camera";
 import { useStore } from "../createStore";
+import { aiName } from "../useServerHealth";
 import { store } from "../state";
 import { Group, Row, Segmented, Switch } from "../ui/controls";
 
@@ -11,6 +12,7 @@ export function SettingsSection() {
   const provider = useStore(store, (s) => s.director.provider);
   const proactivity = useStore(store, (s) => s.director.proactivity);
   const hands = useStore(store, (s) => s.hands);
+  const ai = aiName(useStore(store, (s) => s.ai.provider));
   const [cameras, setCameras] = useState<MediaDeviceInfo[]>([]);
 
   useEffect(() => {
@@ -21,7 +23,7 @@ export function SettingsSection() {
     <>
       <Group
         title="Director"
-        footer="Replay plays back recorded decisions for the sample rehearsal script, so the pipeline can be tested without a key or network. Use Claude for real talks."
+        footer={`Replay plays back recorded decisions for the sample rehearsal script, so the pipeline can be tested without a key or network. Use ${ai} for real talks.`}
       >
         <Row label="How proactive Halo is" detail="Quiet waits for the strongest moments; eager shows more. Also sets the gap between visuals.">
           <Segmented
@@ -34,12 +36,12 @@ export function SettingsSection() {
             ]}
           />
         </Row>
-        <Row label="Decisions from" detail="Claude runs the director through the local server">
+        <Row label="Decisions from" detail={`${ai} runs the director through the local server`}>
           <Segmented
             value={provider}
             onChange={(p) => store.set((s) => ({ director: { ...s.director, provider: p } }))}
             options={[
-              { value: "claude", label: "Claude" },
+              { value: "claude", label: ai },
               { value: "replay", label: "Replay (offline test)" },
             ]}
           />

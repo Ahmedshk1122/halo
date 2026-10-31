@@ -18,7 +18,11 @@ const request: DirectorRequest = {
 };
 
 class FakeLLM implements LLMClient {
+  provider = "anthropic" as const;
   available = true;
+  describeError(err: unknown) {
+    return { status: 500, message: String(err) };
+  }
   last: ToolCallRequest | null = null;
   constructor(private result: Partial<ToolCallResult>) {}
   async callTools(req: ToolCallRequest): Promise<ToolCallResult> {
@@ -56,5 +60,17 @@ describe("cache warm-up", () => {
     expect(llm.last?.system).toEqual(real.last?.system);
     expect(JSON.stringify(llm.last?.tools)).toBe(JSON.stringify(real.last?.tools));
     expect(llm.last?.effort).toBe(real.last?.effort);
+  });
+});
+
+describe("Gemini errors", () => {
+  it("turns rate limits into a wait the director can honor", async () => {
+    const { ApiError } = await import("@google/genai");
+    const { describeGeminiError } = await import("../server/llm/gemini");
+    const minute = describeGeminiError(new ApiError({ status: 429, message: '{"error":{"details":[{"retryDelay":"23s"}]}}' }));
+    expect(minute).toMatchObject({ status: 429, retryAfterSec: 23 });
+    const daily = describeGeminiError(new ApiError({ status: 429, message: "Quota exceeded for metric GenerateRequestsPerDayPerProjectPerModel-FreeTier" }));
+    expect(daily.message).toContain("daily limit");
+    expect(describeGeminiError(new ApiError({ status: 400, message: "API key not valid. Please pass a valid API key." })).status).toBe(401);
   });
 });

@@ -7,6 +7,7 @@ import { director } from "../director/director";
 import { fmtMs, latencyTone } from "../Inspector";
 import { Preview } from "../Preview";
 import { store, type DecisionEntry } from "../state";
+import { aiName } from "../useServerHealth";
 import { Button, Group, Pill, Row, Segmented } from "../ui/controls";
 
 const SPEEDS = ["1", "1.5", "2"] as const;
@@ -19,6 +20,7 @@ export function RehearsalSection() {
   const [progress, setProgress] = useState<RehearsalProgress | null>(null);
   const [running, setRunning] = useState(false);
   const provider = useStore(store, (s) => s.director.provider);
+  const ai = aiName(useStore(store, (s) => s.ai.provider));
   const decisions = useStore(store, (s) => s.decisions);
   const lines = useMemo(() => parseScript(script), [script]);
   const offs = useRef<(() => void)[]>([]);
@@ -76,8 +78,8 @@ export function RehearsalSection() {
         <Row label="Pace" detail="165 words a minute at 1×">
           <Segmented value={speed} onChange={setSpeed} options={SPEEDS.map((s) => ({ value: s, label: `${s}×` }))} />
         </Row>
-        <Row label="Director" detail={provider === "replay" ? "Replay: recorded decisions, no network. Switch in Settings." : "Claude, through the local server"}>
-          <Pill tone={provider === "replay" ? "warn" : "accent"}>{provider === "replay" ? "Replay" : "Claude"}</Pill>
+        <Row label="Director" detail={provider === "replay" ? "Replay: recorded decisions, no network. Switch in Settings." : `${ai}, through the local server`}>
+          <Pill tone={provider === "replay" ? "warn" : "accent"}>{provider === "replay" ? "Replay" : ai}</Pill>
         </Row>
         {progress && (
           <Row label={progress.done ? "Finished" : `Line ${Math.min(progress.index + 1, progress.total)} of ${progress.total}`} detail={current?.beat}>

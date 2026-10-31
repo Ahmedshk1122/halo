@@ -65,6 +65,12 @@ class Director {
   private revealTimer = 0;
   /** Bumped by reset(), so answers to requests from before a reset are ignored. */
   private generation = 0;
+  /** Provider pacing: free-tier keys allow only a few requests a minute. */
+  private limits = { minIntervalMs: 0, interimTriggers: true };
+  private lastSentAt = 0;
+  /** Set when the provider says to slow down; requests wait until then, speech keeps merging. */
+  private cooldownUntil = 0;
+  private waitTimer = 0;
 
   constructor() {
     onStageRendered((id, at) => this.onRendered(id, at, "stage"));
@@ -77,6 +83,10 @@ class Director {
 
   get providerName() {
     return this.provider.name;
+  }
+
+  setLimits(limits: { minIntervalMs: number; interimTriggers: boolean }) {
+    this.limits = limits;
   }
 
   // -------------------------------------------------------------------------
@@ -111,7 +121,7 @@ class Director {
     if (e.type === "interim") {
       store.set({ interim: { text: e.text, at: e.at, label: e.label } });
       this.updateReveals();
-      if (wordCount(e.text) - this.interimWordsAtTrigger >= INTERIM_TRIGGER_WORDS) {
+      if (this.limits.interimTriggers && wordCount(e.text) - this.interimWordsAtTrigger >= INTERIM_TRIGGER_WORDS) {
         this.interimWordsAtTrigger = wordCount(e.text);
         this.schedule({ trigger: "interim", speechEndAt: e.at, request: null });
       }
@@ -135,18 +145,37 @@ class Director {
 
   private schedule(t: Trigger) {
     if (this.inFlight) {
-      this.pending = {
-        trigger: this.pending?.trigger === "request" || t.trigger === "request" ? "request" : t.trigger === "final" || this.pending?.trigger === "final" ? "final" : "interim",
-        speechEndAt: Math.max(t.speechEndAt, this.pending?.speechEndAt ?? 0),
-        request: t.request ?? this.pending?.request ?? null,
-      };
+      this.pending = this.merge(this.pending, t);
+      return;
+    }
+    // Pacing: wait out the provider's cooldown and the minimum gap between requests.
+    const wait = Math.max(this.cooldownUntil, this.lastSentAt + this.limits.minIntervalMs) - now();
+    if (wait > 0) {
+      this.pending = this.merge(this.pending, t);
+      if (!this.waitTimer) this.waitTimer = window.setTimeout(() => this.flushPending(), wait);
       return;
     }
     void this.run(t);
   }
 
+  private flushPending() {
+    this.waitTimer = 0;
+    const next = this.pending;
+    this.pending = null;
+    if (next) this.schedule(next);
+  }
+
+  private merge(a: Trigger | null, b: Trigger): Trigger {
+    return {
+      trigger: a?.trigger === "request" || b.trigger === "request" ? "request" : a?.trigger === "final" || b.trigger === "final" ? "final" : "interim",
+      speechEndAt: Math.max(b.speechEndAt, a?.speechEndAt ?? 0),
+      request: b.request ?? a?.request ?? null,
+    };
+  }
+
   private async run(t: Trigger) {
     this.inFlight = true;
+    this.lastSentAt = now();
     store.set((s) => ({ director: { ...s.director, inFlight: true } }));
     const { req, newThrough, said, label, cueFrom } = this.buildRequest(t.request);
     const logId = this.log({
@@ -169,6 +198,8 @@ class Director {
       this.decidedThrough = Math.max(this.decidedThrough, newThrough);
       this.apply(res.decision, { logId, speechEndAt: t.speechEndAt, explicit: t.trigger === "request", cueFrom });
     } catch (err) {
+      const retryAfterSec = (err as { retryAfterSec?: number }).retryAfterSec;
+      if (retryAfterSec) this.cooldownUntil = now() + retryAfterSec * 1000;
       if (generation !== this.generation) return;
       this.decidedThrough = Math.max(this.decidedThrough, newThrough);
       this.patchLog(logId, { action: "error", outcome: "error", reason: (err as Error).message, requestMs: Math.round(now() - sentAt) });
@@ -177,7 +208,7 @@ class Director {
       store.set((s) => ({ director: { ...s.director, inFlight: false } }));
       const next = this.pending;
       this.pending = null;
-      if (next) void this.run(next);
+      if (next) this.schedule(next);
     }
   }
 
@@ -550,6 +581,8 @@ class Director {
     this.generation += 1;
     this.cancelDeferred();
     this.pending = null;
+    window.clearTimeout(this.waitTimer);
+    this.waitTimer = 0;
     this.decidedThrough = 0;
     this.interimWordsAtTrigger = 0;
     this.latencyFor.clear();

@@ -32,7 +32,7 @@ if (!health) {
 }
 const director = arg("director", health.hasKey ? "claude" : "replay");
 if (director === "claude" && !health.hasKey) {
-  console.error("The server has no ANTHROPIC_API_KEY. Add it to .env and restart npm run dev, or use --director replay.");
+  console.error("The server has no API key. Add it to .env and restart npm run dev, or use --director replay.");
   process.exit(2);
 }
 const speed = arg("speed", director === "claude" ? "1" : "1.5");
@@ -67,7 +67,8 @@ await control.evaluate(
 await control.getByRole("button", { name: "Rehearsal" }).click();
 await control.getByRole("radio", { name: `${speed}×` }).click();
 await control.getByRole("button", { name: "Play script" }).click();
-console.log(`Rehearsing with the ${director} director at ${speed}×…`);
+const label = director === "replay" ? "replay" : `${health.provider ?? "anthropic"} (${health.directorModel})`;
+console.log(`Rehearsing with the ${label} director at ${speed}×…`);
 
 // Sample the stage continuously, tagged with the beat being spoken.
 const timeline = [];
@@ -181,7 +182,7 @@ const median = latencies.length ? latencies[Math.floor(latencies.length / 2)] : 
 
 console.log("");
 for (const c of checks) console.log(`${c.pass ? "PASS" : "FAIL"}  ${c.name}\n      ${c.evidence}`);
-console.log(`\nDirector: ${director} · median end of speech to visual on stage: ${median === null ? "n/a" : `${median} ms`} (target 2500 ms)`);
+console.log(`\nDirector: ${label} · median end of speech to visual on stage: ${median === null ? "n/a" : `${median} ms`} (target 2500 ms)`);
 if (errors.length) console.log(`Errors: ${errors.join("; ")}`);
 console.log(`Screenshots and report: ${OUT}`);
 writeFileSync(join(OUT, "report.json"), JSON.stringify({ director, speed, checks, medianLatencyMs: median, decisions: state.decisions, timeline }, null, 2));
