@@ -3,6 +3,7 @@ import { STAGE_W, type Rect } from "../../../shared/geometry";
 import { classifyHand, faceKeepOut, GestureMachine, videoToStage } from "../../../shared/gestures";
 import type { TrackerFrame, VisionTracker } from "../../hands/tracker";
 import { setKeepOut } from "../stageActions";
+import { RELOAD_HINT } from "../../data/loadFile";
 import { store } from "../state";
 import { DragSession, expandAt, targetAt, visualAt } from "./interaction";
 
@@ -83,7 +84,13 @@ export async function startHands() {
   if (tracker) return;
   store.set((s) => ({ hands: { ...s.hands, status: "loading", detail: undefined } }));
   // MediaPipe is large; load it only when hand tracking starts.
-  const { VisionTracker: Tracker } = await import("../../hands/tracker");
+  let Tracker: typeof import("../../hands/tracker").VisionTracker;
+  try {
+    ({ VisionTracker: Tracker } = await import("../../hands/tracker"));
+  } catch {
+    store.set((s) => ({ hands: { ...s.hands, status: "error", detail: RELOAD_HINT } }));
+    return;
+  }
   const mine = new Tracker(onFrame);
   tracker = mine;
   try {
