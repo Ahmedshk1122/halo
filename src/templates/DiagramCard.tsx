@@ -1,6 +1,5 @@
 import { motion, useReducedMotion } from "motion/react";
 import { useId } from "react";
-import { BACKDROPS } from "../../shared/backdrops";
 import { diagramArea } from "../../shared/layout";
 import { diagramCues, type DiagramNode, type DiagramTone, type RDiagram } from "../../shared/visuals";
 import { SvgIcon } from "./icons";
@@ -42,22 +41,13 @@ interface Box {
   h: number;
 }
 
-/** Any visual composed from simple parts: frameworks, maps, anatomy, a race. */
+/** Any visual the model composes on the fly from simple parts: frameworks, maps, a body, a race. */
 export function DiagramCard({ v, reveal }: { v: RDiagram; reveal: number }) {
   const reduce = useReducedMotion();
   const uid = useId().replace(/:/g, "");
   const area = diagramArea(v);
-  const backdrop = v.backdrop === "none" ? null : BACKDROPS[v.backdrop];
-
-  // The canvas: the backdrop's own box when there is one, else the whole area.
-  let canvas: Box = { x: 0, y: 0, w: area.w, h: area.h };
-  if (backdrop) {
-    const h = Math.min(area.h, area.w / backdrop.aspect);
-    const w = h * backdrop.aspect;
-    canvas = { x: (area.w - w) / 2, y: (area.h - h) / 2, w, h };
-  } else {
-    canvas = { x: area.w * 0.03, y: area.h * 0.04, w: area.w * 0.94, h: area.h * 0.92 };
-  }
+  // The canvas: the drawing area with a little room for labels at the edges.
+  const canvas: Box = { x: area.w * 0.03, y: area.h * 0.04, w: area.w * 0.94, h: area.h * 0.92 };
   const X = (x: number) => canvas.x + (x / 100) * canvas.w;
   const Y = (y: number) => canvas.y + (y / 100) * canvas.h;
 
@@ -97,25 +87,12 @@ export function DiagramCard({ v, reveal }: { v: RDiagram; reveal: number }) {
     return { x: cx + dx * Math.min(1, t) * 1.0, y: cy + dy * Math.min(1, t) };
   };
 
-  // Body-part labels sit beside the body with a leader line, stacked so they never collide.
-  const sideLabels = new Map<string, { x: number; y: number; anchor: "start" | "end" }>();
-  if (v.backdrop === "human_body") {
-    for (const side of ["left", "right"] as const) {
-      const ms = v.markers.filter((m) => (side === "left" ? m.x < 50 : m.x >= 50)).sort((a, b) => a.y - b.y);
-      let lastY = -Infinity;
-      for (const m of ms) {
-        const y = Math.max(Y(m.y), lastY + 40);
-        lastY = y;
-        sideLabels.set(m.id, side === "left" ? { x: canvas.x - 24, y, anchor: "end" } : { x: canvas.x + canvas.w + 24, y, anchor: "start" });
-      }
-    }
-  }
   // Other marker labels sit beside their marker; when two would collide, the
   // later one moves below or to the other side.
   const placedLabels: Box[] = [];
   const freeLabels = new Map<string, { x: number; y: number; anchor: "start" | "end" }>();
   for (const m of v.markers) {
-    if (sideLabels.has(m.id) || !m.label) continue;
+    if (!m.label) continue;
     const px = X(m.x);
     const py = Y(m.y);
     const w = textWidth(m.label, 24);
@@ -131,7 +108,6 @@ export function DiagramCard({ v, reveal }: { v: RDiagram; reveal: number }) {
     placedLabels.push(box(pick));
     freeLabels.set(m.id, pick);
   }
-  const highlightedDetails = new Set(v.markers.filter((m) => visible(m.cue)).map((m) => m.anchor).filter(Boolean));
 
   const toneOf = (t: DiagramTone) => TONE[t] ?? TONE.neutral;
 
@@ -170,32 +146,7 @@ export function DiagramCard({ v, reveal }: { v: RDiagram; reveal: number }) {
           );
         })}
 
-        {/* Backdrop drawing */}
-        {backdrop && (
-          <g transform={`translate(${canvas.x} ${canvas.y}) scale(${canvas.w / 100} ${canvas.h / 100})`} className={`dg-backdrop is-${backdrop.style}`}>
-            {backdrop.outline.map((d, i) =>
-              backdrop.style === "track" ? (
-                <g key={i}>
-                  <path d={d} className="dg-track" vectorEffect="non-scaling-stroke" />
-                  <path d={d} className="dg-track-line" vectorEffect="non-scaling-stroke" />
-                </g>
-              ) : (
-                <path key={i} d={d} className="dg-silhouette" vectorEffect="non-scaling-stroke" />
-              ),
-            )}
-            {backdrop.details.map((det) => (
-              <path
-                key={det.id}
-                d={det.d}
-                data-part={`part-${det.id}`}
-                className={`dg-detail${highlightedDetails.has(det.id) ? " is-on" : ""}`}
-                vectorEffect="non-scaling-stroke"
-              />
-            ))}
-          </g>
-        )}
-
-        {/* Paths: routes, movements, a racing line */}
+        {/* Paths: outlines the model draws (a body, a track) and routes (an overtake) */}
         {v.paths.map((p) => {
           const t = toneOf(p.tone);
           const pts = p.points.map((q) => ({ x: X(q.x), y: Y(q.y) }));
@@ -205,9 +156,9 @@ export function DiagramCard({ v, reveal }: { v: RDiagram; reveal: number }) {
             <g key={p.id} data-part={`path-${p.id}`}>
               <motion.path
                 d={smoothPath(pts, p.closed)}
-                fill="none"
-                stroke={t.solid}
-                strokeWidth={6}
+                fill={p.filled ? t.fill : "none"}
+                stroke={p.weight === "thick" ? (p.tone === "neutral" ? "var(--fill)" : t.fill) : t.solid}
+                strokeWidth={p.weight === "thick" ? 26 : p.weight === "thin" ? (p.filled ? 2 : 3) : 6}
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 markerEnd={p.arrow ? `url(#arrow-${p.tone}-${uid})` : undefined}
@@ -292,10 +243,8 @@ export function DiagramCard({ v, reveal }: { v: RDiagram; reveal: number }) {
           const t = toneOf(m.tone === "neutral" ? "accent" : m.tone);
           const px = X(m.x);
           const py = Y(m.y);
-          const side = sideLabels.get(m.id);
           return (
             <motion.g key={m.id} data-part={`marker-${m.id}`} {...appear(m.cue)} style={{ transformOrigin: `${px}px ${py}px` }}>
-              {side && <polyline points={`${px},${py} ${side.anchor === "end" ? side.x + 12 : side.x - 12},${side.y - 8}`} fill="none" stroke="var(--label-3)" strokeWidth={2} />}
               {m.kind === "car" ? (
                 <rect x={px - 18} y={py - 11} width={36} height={22} rx={8} fill={t.solid} stroke="var(--glass-bg-solid)" strokeWidth={3} />
               ) : m.kind === "pin" ? (
@@ -305,9 +254,9 @@ export function DiagramCard({ v, reveal }: { v: RDiagram; reveal: number }) {
               )}
               {m.label && (
                 <text
-                  x={(side ?? freeLabels.get(m.id))?.x ?? px + 24}
-                  y={(side ?? freeLabels.get(m.id))?.y ?? py - 16}
-                  textAnchor={(side ?? freeLabels.get(m.id))?.anchor ?? "start"}
+                  x={freeLabels.get(m.id)?.x ?? px + 24}
+                  y={freeLabels.get(m.id)?.y ?? py - 16}
+                  textAnchor={freeLabels.get(m.id)?.anchor ?? "start"}
                   className="dg-label is-halo"
                 >
                   {m.label}

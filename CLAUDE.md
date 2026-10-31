@@ -27,7 +27,7 @@ This repo is the web prototype: a Vite + React + TypeScript app plus a tiny loca
 - `src/stage/` — the stage renderer. `StageCanvas` is shared by `/stage` and the control preview. Camera input lives in `camera.ts`/`CameraVideo.tsx`; keep the camera/output layer separate from everything else (it gets replaced by a native camera extension).
 - `src/control/` — the presenter panel. **The control window owns all state** (`state.ts` store); every change to what is on stage goes through `stageActions.ts`; `stageSync.ts` broadcasts a `StageState` snapshot over `BroadcastChannel("halo")`.
 - `src/templates/` — one React component per template, driven by a resolved JSON spec. Templates never see raw specs or typed numbers.
-- Visuals aren't limited to numbers: the `diagram` template is composed live from regions, nodes, links, paths and markers on a 0–100 canvas, so the director can draw any topic (frameworks, segments, factors, mechanisms, anatomy, a race). `shared/backdrops.ts` holds ready-made drawings (human body, race track) with named anchors for things simple shapes can't draw well.
+- **Visuals are generated on the fly, never preset.** The model writes every visual's content live. The `diagram` template is composed from scratch from regions, nodes, links, paths (outlines the model draws itself, like a body or a track) and markers on a 0–100 canvas, so the director can draw any topic. Only the styling is fixed (the design system). Gallery samples and replay fixtures are test material, never used live.
 - Speech-to-text and the LLM are behind interfaces so they can be swapped.
 - Routes: `/stage`, `/control` (also `/`), `/gallery` (every template with sample data).
 

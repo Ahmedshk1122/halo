@@ -3,7 +3,6 @@
 // maps back to a decision. Shared by the server, the offline replay director
 // and the tests.
 
-import { BACKDROP_IDS, backdropAnchors } from "./backdrops";
 import { ICON_NAMES, UI_BLOCK_KINDS, type TemplateId, type VisualSpec } from "./visuals";
 
 export type Proactivity = "quiet" | "balanced" | "eager";
@@ -215,10 +214,6 @@ const TEMPLATE_PROPS: Record<TemplateId, Record<string, JsonSchema>> = {
   diagram: {
     caption: str("Short line under the title, or empty."),
     aspect: enm(["wide", "square", "tall"], "Shape of the drawing area."),
-    backdrop: enm(
-      BACKDROP_IDS,
-      `A ready-made drawing to mark up, or none. human_body anchors: ${backdropAnchors("human_body").join(", ")}. race_track anchors: ${backdropAnchors("race_track").join(", ")}.`,
-    ),
     reveal: enm(["progressive", "all"], "progressive: parts with a cue appear as the presenter says it. all: everything at once."),
     regions: arr(
       obj({
@@ -264,21 +259,22 @@ const TEMPLATE_PROPS: Record<TemplateId, Record<string, JsonSchema>> = {
       obj({
         id: str("Short unique id."),
         label: str("One to three words, or empty."),
-        points: arr(obj({ x: num("0-100."), y: num("0-100.") }), "Two to twelve points along the route; drawn as a smooth curve."),
-        closed: bool("Close the shape."),
+        points: arr(obj({ x: num("0-100."), y: num("0-100.") }), "Two to twenty-four points along the line; drawn as a smooth curve."),
+        closed: bool("Close the shape (an outline)."),
+        filled: bool("For closed shapes: fill softly, like a silhouette of a body, an organ or a country. False for a loop line like a race track."),
+        weight: enm(["thin", "normal", "thick"], "thin: detail lines; normal: routes and movements; thick: a road or track."),
         arrow: bool("Arrowhead at the end."),
         tone: tone,
         cue: diagramCue,
       }),
-      "Routes and movements: a racing line, an overtake, a journey, a flow. Often empty.",
+      "Lines and outlines you draw yourself: a body or organ outline, a race track, a racing line or overtake, a journey, a river. Often empty.",
     ),
     markers: arr(
       obj({
         id: str("Short unique id."),
         label: str("One to three words."),
-        anchor: str("A backdrop anchor name to place it on, or empty to use x and y."),
-        x: num("0-100 when no anchor, else 0."),
-        y: num("0-100 when no anchor, else 0."),
+        x: num("0-100."),
+        y: num("0-100."),
         kind: enm(["dot", "pin", "car"], "dot for a point or part, pin for a place, car for a vehicle or player."),
         tone: tone,
         cue: diagramCue,
@@ -312,7 +308,7 @@ const TOOL_DESCRIPTIONS: Record<TemplateId, string> = {
   statement: "Show one short line, for a closing ask or key takeaway.",
   goal: "Show where something is and where it should go: two values side by side with the change, e.g. revenue today versus the target.",
   diagram:
-    "Draw anything worth seeing that the other visuals don't fit: a framework or matrix, target segments, factors (headwinds and tailwinds), a mechanism, a map of relationships, anatomy (backdrop human_body), a race or play-by-play (backdrop race_track). Compose it from regions, nodes, links, paths and markers on a 0-100 canvas, x to the right and y down. Keep it simple: three to twelve parts, labels of one to four words, nothing overlapping.",
+    "Draw anything worth seeing that the other visuals don't fit, from scratch: a framework or matrix, target segments, factors (headwinds and tailwinds), a mechanism, a map of relationships, a body and its parts, a race or a play-by-play. Compose it from regions, nodes, links, paths (draw outlines like a body or a track yourself) and markers on a 0-100 canvas, x to the right and y down. Keep it simple and clear: a few well-placed parts, labels of one to four words, nothing overlapping.",
 };
 
 export const TOOL_FOR_TEMPLATE: Record<TemplateId, string> = {

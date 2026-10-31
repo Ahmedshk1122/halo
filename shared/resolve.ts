@@ -3,7 +3,6 @@
 // cannot be grounded rejects the visual.
 
 import { formatDelta, formatLabel, formatValue, normalizeName, type DataColumn, type DataTable } from "./data";
-import { BACKDROPS, BACKDROP_IDS } from "./backdrops";
 import { scanSpec, type GroundingViolation } from "./grounding";
 import { wasSaid, type SpokenNumber } from "./spoken";
 import type {
@@ -248,14 +247,7 @@ function tidyDiagram(spec: DiagramSpec): DiagramSpec {
   return {
     ...spec,
     caption: tidy(spec.caption ?? "", 60),
-    // A backdrop decides the shape it reads best in; otherwise the model's choice.
-    aspect:
-      spec.backdrop && spec.backdrop !== "none" && BACKDROPS[spec.backdrop as keyof typeof BACKDROPS]
-        ? BACKDROPS[spec.backdrop as keyof typeof BACKDROPS].diagramAspect
-        : spec.aspect === "wide" || spec.aspect === "tall"
-          ? spec.aspect
-          : "square",
-    backdrop: (BACKDROP_IDS as readonly string[]).includes(spec.backdrop) ? spec.backdrop : "none",
+    aspect: spec.aspect === "wide" || spec.aspect === "tall" ? spec.aspect : "square",
     reveal: spec.reveal === "progressive" ? "progressive" : "all",
     regions: (spec.regions ?? []).slice(0, 6).map((r) => ({
       ...r,
@@ -293,8 +285,10 @@ function tidyDiagram(spec: DiagramSpec): DiagramSpec {
       ...p,
       id: String(p.id || `p${i + 1}`),
       label: tidy(p.label ?? "", 24),
-      points: (p.points ?? []).slice(0, 16).map((q) => ({ x: pct(q.x), y: pct(q.y) })),
+      points: (p.points ?? []).slice(0, 24).map((q) => ({ x: pct(q.x), y: pct(q.y) })),
       closed: !!p.closed,
+      filled: !!p.closed && !!p.filled,
+      weight: p.weight === "thin" || p.weight === "thick" ? p.weight : "normal",
       arrow: !!p.arrow,
       tone: toneOf(p.tone),
       cue: cue(p.cue),
@@ -303,7 +297,6 @@ function tidyDiagram(spec: DiagramSpec): DiagramSpec {
       ...m,
       id: String(m.id || `m${i + 1}`),
       label: tidy(m.label ?? "", 28),
-      anchor: String(m.anchor ?? "").trim().toLowerCase().replace(/\s+/g, "_"),
       x: pct(m.x),
       y: pct(m.y),
       kind: m.kind === "pin" || m.kind === "car" ? m.kind : "dot",
@@ -313,16 +306,9 @@ function tidyDiagram(spec: DiagramSpec): DiagramSpec {
   };
 }
 
-/** Anchors resolved, links to missing nodes dropped, and a tidy layout when the model gave none. */
+/** Links to missing nodes dropped, and a tidy layout when the model gave none. */
 function resolveDiagram(spec: DiagramSpec): RDiagram {
-  const backdrop = spec.backdrop === "none" ? null : BACKDROPS[spec.backdrop];
-  const markers = spec.markers
-    .map((m) => {
-      if (!m.anchor) return m;
-      const a = backdrop?.anchors[m.anchor];
-      return a ? { ...m, x: a.x, y: a.y } : null;
-    })
-    .filter((m): m is DiagramSpec["markers"][number] => m !== null);
+  const markers = spec.markers;
   // Nodes stacked on one spot (no layout given): spread them in rows.
   let nodes = spec.nodes;
   const spots = new Set(nodes.map((n) => `${Math.round(n.x / 4)},${Math.round(n.y / 4)}`));
@@ -343,7 +329,6 @@ function resolveDiagram(spec: DiagramSpec): RDiagram {
     title: spec.title,
     caption: spec.caption,
     aspect: spec.aspect,
-    backdrop: spec.backdrop,
     reveal: spec.reveal,
     regions: spec.regions,
     nodes,
@@ -547,7 +532,7 @@ function resolve(spec: VisualSpec, tables: DataTable[], said: SpokenNumber[]): R
     case "diagram": {
       const d = resolveDiagram(spec);
       if (d.regions.length + d.nodes.length + d.paths.length + d.markers.length === 0) {
-        throw new RefError("diagram markers point at anchors that don't exist");
+        throw new RefError("diagram has nothing to draw");
       }
       return d;
     }

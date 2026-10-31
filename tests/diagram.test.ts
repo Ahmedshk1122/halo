@@ -8,7 +8,6 @@ const base: DiagramSpec = {
   caption: "",
   aliases: [],
   aspect: "square",
-  backdrop: "none",
   reveal: "all",
   regions: [],
   nodes: [],
@@ -18,22 +17,22 @@ const base: DiagramSpec = {
 };
 
 describe("diagram", () => {
-  it("places markers on backdrop anchors and drops unknown anchors", () => {
+  it("draws outlines the model gives as points, filled only when closed", () => {
     const r = prepareVisual(
       {
         ...base,
-        backdrop: "human_body",
-        markers: [
-          { id: "h", label: "Heart", anchor: "heart", x: 0, y: 0, kind: "dot", tone: "highlight", cue: "" },
-          { id: "x", label: "Spleen", anchor: "spleen", x: 0, y: 0, kind: "dot", tone: "accent", cue: "" },
+        paths: [
+          { id: "body", label: "", points: [{ x: 40, y: 10 }, { x: 60, y: 10 }, { x: 60, y: 90 }, { x: 40, y: 90 }], closed: true, filled: true, weight: "thin", arrow: false, tone: "muted", cue: "" },
+          { id: "route", label: "", points: [{ x: 10, y: 10 }, { x: 90, y: 90 }], closed: false, filled: true, weight: "normal", arrow: true, tone: "accent", cue: "" },
         ],
+        markers: [{ id: "h", label: "Heart", x: 53, y: 34, kind: "dot", tone: "highlight", cue: "" }],
       },
       [],
     );
     expect(r.ok).toBe(true);
     if (!r.ok || r.visual.template !== "diagram") return;
-    expect(r.visual.markers).toHaveLength(1);
-    expect(r.visual.markers[0]).toMatchObject({ x: 50, y: 41 });
+    expect(r.visual.paths.map((p) => p.filled)).toEqual([true, false]);
+    expect(r.visual.markers[0]).toMatchObject({ x: 53, y: 34 });
   });
 
   it("lays out nodes the model stacked on one spot, and drops links to missing nodes", () => {

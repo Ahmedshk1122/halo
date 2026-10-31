@@ -637,33 +637,3 @@
   stroke-width: 6px;
   stroke-linejoin: round;
 }
-.dg-silhouette {
-  fill: var(--fill-2);
-  stroke: var(--label-3);
-  stroke-width: 2px;
-}
-.dg-detail {
-  fill: var(--fill);
-  stroke: none;
-  transition: fill 0.3s;
-}
-.dg-detail.is-on {
-  fill: color-mix(in srgb, var(--accent) 45%, transparent);
-}
-.dg-track {
-  fill: none;
-  stroke: var(--fill);
-  stroke-width: 30px;
-  stroke-linejoin: round;
-}
-.dg-track-line {
-  fill: none;
-  stroke: var(--label-3);
-  stroke-width: 2px;
-  stroke-dasharray: 6 10;
-}
-.is-track .dg-detail {
-  stroke: var(--label);
-  stroke-width: 4px;
-  fill: none;
-}

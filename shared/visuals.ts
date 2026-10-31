@@ -1,5 +1,3 @@
-import type { BackdropId } from "./backdrops";
-
 // Visual specs. A spec is what the director (or planner) produces: JSON with
 // data references instead of numbers. The app resolves references against the
 // loaded data and produces a ResolvedVisual, which is the only thing templates
@@ -260,9 +258,10 @@ export interface GoalSpec extends SpecBase {
 }
 
 // ---------------------------------------------------------------------------
-// Diagram: any visual composed from simple parts on a 0–100 canvas
-// (x to the right, y down). Frameworks, segment maps, matrices, factors,
-// mechanisms, anatomy (human_body backdrop), racing (race_track backdrop).
+// Diagram: any visual the model composes on the fly from simple parts on a
+// 0–100 canvas (x to the right, y down): frameworks, segment maps, matrices,
+// factors, mechanisms, outlines it draws itself (a body, a track), a race.
+// Nothing is pre-drawn; only the styling is fixed.
 // ---------------------------------------------------------------------------
 
 export type DiagramTone = "accent" | "neutral" | "highlight" | "muted";
@@ -308,6 +307,10 @@ export interface DiagramPath {
   label: string;
   points: { x: number; y: number }[];
   closed: boolean;
+  /** Closed shapes only: fill softly (a silhouette) instead of a loop line. */
+  filled: boolean;
+  /** thin: a detail line; normal: a route; thick: a road or track. */
+  weight: "thin" | "normal" | "thick";
   arrow: boolean;
   tone: DiagramTone;
   cue: string;
@@ -316,8 +319,6 @@ export interface DiagramPath {
 export interface DiagramMarker {
   id: string;
   label: string;
-  /** A backdrop anchor name ("heart", "turn_3"); empty to use x and y. */
-  anchor: string;
   x: number;
   y: number;
   kind: "dot" | "pin" | "car";
@@ -329,7 +330,6 @@ export interface DiagramSpec extends SpecBase {
   template: "diagram";
   caption: string;
   aspect: "wide" | "square" | "tall";
-  backdrop: BackdropId;
   reveal: RevealMode;
   regions: DiagramRegion[];
   nodes: DiagramNode[];
@@ -516,13 +516,11 @@ export interface RDiagram {
   title: string;
   caption: string;
   aspect: DiagramSpec["aspect"];
-  backdrop: BackdropId;
   reveal: RevealMode;
   regions: DiagramRegion[];
   nodes: DiagramNode[];
   links: DiagramLink[];
   paths: DiagramPath[];
-  /** Markers with anchors resolved to coordinates. */
   markers: DiagramMarker[];
   accent: Accent;
 }
