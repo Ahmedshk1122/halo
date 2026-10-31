@@ -6,12 +6,12 @@
 import { ICON_NAMES, UI_BLOCK_KINDS, type TemplateId, type VisualSpec } from "./visuals";
 
 export type Proactivity = "quiet" | "balanced" | "eager";
-/** Model providers the local server can use. Kimi and Qwen go through their OpenAI-compatible APIs. */
-export type AIProvider = "anthropic" | "gemini" | "kimi" | "qwen";
+/** Model providers the local server can use. */
+export type AIProvider = "anthropic" | "gemini";
 
 /** Display name of a model provider. */
 export function aiName(provider: AIProvider | null | undefined): string {
-  return provider === "gemini" ? "Gemini" : provider === "kimi" ? "Kimi" : provider === "qwen" ? "Qwen" : "Claude";
+  return provider === "gemini" ? "Gemini" : "Claude";
 }
 export type DirectorAction = "none" | "show" | "update" | "tuck" | "recall" | "clear";
 

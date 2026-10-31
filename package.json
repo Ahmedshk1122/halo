@@ -15,6 +15,7 @@
     "setup:mediapipe": "node scripts/setup-mediapipe.mjs",
     "key": "node scripts/set-key.mjs",
     "model": "node scripts/set-key.mjs model",
+    "use": "node scripts/set-key.mjs use",
     "postinstall": "node scripts/setup-mediapipe.mjs --wasm-only"
   },
   "dependencies": {

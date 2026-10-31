@@ -11,7 +11,7 @@ This is the web prototype. Halo renders a clean stage window in Chrome, OBS capt
 - macOS with Google Chrome (the Web Speech API and MediaPipe run in Chrome)
 - Node.js 20 or later
 - [OBS Studio](https://obsproject.com) 30 or later
-- An API key for one model provider: Claude (Anthropic), Kimi (Moonshot AI), Qwen (Alibaba Cloud) or Gemini (Google)
+- A Google Gemini API key (free tier, the default), or an Anthropic API key for Claude
 
 ## Setup
 
@@ -20,10 +20,10 @@ git clone https://github.com/Ahmedshk1122/halo.git
 cd halo
 npm install
 npm run setup:mediapipe   # downloads the hand and face models into public/mediapipe
-npm run key claude        # or: npm run key kimi / qwen / gemini
+npm run key gemini        # or: npm run key claude
 ```
 
-`npm run key` asks you to paste the key (it stays hidden), saves it to `.env` and switches Halo to that provider. `.env` is gitignored. The key is read only by the local server and never reaches the browser.
+`npm run key` asks you to paste the key (it stays hidden), saves it to `.env` and switches Halo to that provider. `npm run use gemini` or `npm run use claude` switches between keys already saved. `.env` is gitignored. The key is read only by the local server and never reaches the browser.
 
 ## Run
 
@@ -127,9 +127,21 @@ It also checks that every number on screen traces back to the sample files, and 
 
 **Replay director.** Settings → Decisions from → **Replay** plays back recorded tool calls for the sample script (`fixtures/`). It runs the whole pipeline (grounding, placement, tucking, reveal, recall, latency) without a key or network. It is a test double for the pipeline, not a stand-in for Claude's judgment. Run the acceptance test with `--director claude` to test the real director.
 
+## Gemini (default)
+
+Halo runs on Google Gemini by default, which has a free tier. Get a key at aistudio.google.com (Get API key), then:
+
+```bash
+npm run key gemini
+```
+
+- Defaults: `gemini-flash-lite-latest` for the director and planner. Change it with `npm run model <name>` (sets `GEMINI_DIRECTOR_MODEL` / `GEMINI_PLANNER_MODEL`).
+- Free-tier keys allow only a few requests a minute, so Halo spaces director calls at least 6 seconds apart (`GEMINI_MIN_INTERVAL_MS`), decides at the end of each sentence rather than mid-sentence, and waits whenever Google asks it to slow down.
+- Same tools and grounding as Claude. Halo's prompts were written for Claude, so choices may differ. Check Google's terms for how free-tier requests may be used.
+
 ## Claude
 
-Models are set in `.env`:
+To use Claude instead, run `npm run key claude` (it sets `HALO_PROVIDER=anthropic`). Models are set in `.env`:
 
 | Variable | Default | Used for |
 | --- | --- | --- |
@@ -141,39 +153,6 @@ Models are set in `.env`:
 - Output is structured with tool use and strict JSON schemas: one tool per template, plus `show_prepared` and `act`.
 - The director's rules, tools and data catalog are prompt-cached, and pre-warmed when you start listening. The cache is refreshed every four minutes while you listen.
 - On models that support it (Opus 5.5, Sonnet 5.5), requests use Anthropic's server-side refusal fallback (`fallbacks: "default"`). The default Haiku director does not need it.
-
-### Using Kimi or Qwen instead
-
-Halo can run on Kimi (Moonshot AI) or Qwen (Alibaba Cloud Model Studio) through their OpenAI-compatible APIs:
-
-```bash
-npm run key kimi          # paste the key from platform.moonshot.ai
-npm run key qwen          # paste the key from Alibaba Cloud Model Studio
-```
-
-Then restart `npm run dev`. When the server starts it checks the key, picks the endpoint that accepts it (international or China), and prints the models the key can use. To change the model:
-
-```bash
-npm run model kimi-k3
-```
-
-- Defaults: `kimi-k3` for Kimi, `qwen-plus` for Qwen (`KIMI_DIRECTOR_MODEL` / `KIMI_PLANNER_MODEL`, `QWEN_DIRECTOR_MODEL` / `QWEN_PLANNER_MODEL`). A Kimi key runs Kimi models and a Qwen key runs Qwen models; they are different companies.
-- No pacing between requests: Halo decides as soon as speech arrives, mid-sentence included. If the provider asks it to slow down (a rate limit), it waits and carries on. `HALO_MIN_INTERVAL_MS` adds a gap if you want one.
-- Thinking is off for speed (`KIMI_THINKING` / `QWEN_THINKING`: `off`, `on` or `default`). Each decision may take up to 20 seconds (`HALO_DIRECTOR_TIMEOUT_MS`).
-- Providers differ in which request options they accept. When one is rejected (for example a forced tool call), Halo retries without it and remembers that for the model.
-- Same tools, same grounding: every number still has to be one you said or one in your data. Halo's prompts were written for Claude, so choices may differ.
-- `KIMI_BASE_URL` / `QWEN_BASE_URL` point Halo at another OpenAI-compatible endpoint.
-
-### Using Gemini instead
-
-Halo can also run on Google Gemini, which has a free tier: `npm run key gemini`, or in `.env`:
-
-```
-HALO_PROVIDER=gemini
-GEMINI_API_KEY=your-key
-```
-
-It uses the same tools and grounding. Defaults: `gemini-flash-lite-latest` for the director and planner (change with `GEMINI_DIRECTOR_MODEL` / `GEMINI_PLANNER_MODEL`). Free-tier keys allow only a few requests a minute, so with Gemini Halo spaces director calls at least 6 seconds apart (`GEMINI_MIN_INTERVAL_MS`), decides at the end of each sentence rather than mid-sentence, and waits whenever Google asks it to slow down. Visuals can arrive a few seconds later than with Claude, and Halo's prompts were written for Claude, so choices may differ. Check Google's terms for how free-tier requests may be used.
 
 ## Settings
 
@@ -189,9 +168,7 @@ It uses the same tools and grounding. Defaults: `gemini-flash-lite-latest` for t
 
 ## Troubleshooting
 
-- **"Your credit balance is too low"** in the decision log: the Anthropic account has no credit. Add credit, or use another provider (above).
-- **"Model not found"** with Kimi or Qwen: the server terminal lists the models your key can use when it starts. Pick one with `npm run model <name>` and restart.
-- **"No credit left"** with Kimi or Qwen: add balance on the provider's platform.
+- **"Your credit balance is too low"** in the decision log: the Anthropic account has no credit. Add credit, or switch to Gemini with `npm run key gemini`.
 
 - **The stage freezes in OBS when another window covers it.** Start Chrome with the flags above (`./scripts/open-chrome.sh`).
 - **"No ... key in .env"** in the sidebar. Run `npm run key <provider>` and restart `npm run dev`.
