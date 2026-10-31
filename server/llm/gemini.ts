@@ -45,8 +45,10 @@ export class GeminiLLM implements LLMClient {
         tools: [{ functionDeclarations }],
         // ANY: the reply must be function calls. The planner may make several in one reply.
         toolConfig: { functionCallingConfig: { mode: FunctionCallingConfigMode.ANY } },
-        maxOutputTokens: req.maxTokens,
-        httpOptions: { timeout: req.timeoutMs },
+        // Room for models that think before calling a function; unused tokens cost nothing.
+        maxOutputTokens: Math.max(req.maxTokens, 8192),
+        // A client-side timeout: Gemini rejects server deadlines under 10 s (httpOptions.timeout).
+        abortSignal: AbortSignal.timeout(req.timeoutMs),
         ...(thinking ? { thinkingConfig: { thinkingLevel: thinking } } : {}),
       },
     });
