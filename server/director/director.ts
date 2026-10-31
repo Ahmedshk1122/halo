@@ -11,6 +11,8 @@ import { DIRECTOR_SYSTEM, contextBlock, userMessage } from "./prompt";
 export interface DirectorOptions {
   model: string;
   effort: "low" | "medium" | "high";
+  /** How long a decision may take; it is no use to the presenter after that. */
+  timeoutMs?: number;
 }
 
 const TOOLS = directorTools();
@@ -29,7 +31,7 @@ export async function decide(llm: LLMClient, req: DirectorRequest, opts: Directo
     tools: TOOLS,
     mode: "one",
     maxTokens: 2048,
-    timeoutMs: 9000,
+    timeoutMs: opts.timeoutMs ?? 9000,
   });
 
   const call = result.calls[0];

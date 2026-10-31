@@ -1,5 +1,5 @@
 // The LLM sits behind this interface so the provider can be swapped.
-import type { ToolDef } from "../../shared/director";
+import type { AIProvider, ToolDef } from "../../shared/director";
 
 export interface ToolCallRequest {
   model: string;
@@ -37,7 +37,7 @@ export interface LLMError {
 }
 
 export interface LLMClient {
-  readonly provider: "anthropic" | "gemini";
+  readonly provider: AIProvider;
   readonly available: boolean;
   callTools(req: ToolCallRequest): Promise<ToolCallResult>;
   /** Human-readable error for the decision log, without leaking request details. */

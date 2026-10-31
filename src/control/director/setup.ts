@@ -1,5 +1,6 @@
 // Chooses the director provider from settings and exposes hooks for tests.
 import replay from "../../../fixtures/replay_onboarding.json";
+import type { AIProvider } from "../../../shared/director";
 import { store } from "../state";
 import { director } from "./director";
 import { ReplayDirector, ServerDirector, type ReplayFixture } from "./providers";
@@ -11,7 +12,7 @@ export const replayDirector = new ReplayDirector((replay as { fixtures: ReplayFi
 async function syncServer() {
   try {
     const h = (await fetch("/api/health").then((r) => r.json())) as {
-      provider?: "anthropic" | "gemini";
+      provider?: AIProvider;
       limits?: { minIntervalMs: number; interimTriggers: boolean };
     };
     director.setLimits(h.limits ?? { minIntervalMs: 0, interimTriggers: true });

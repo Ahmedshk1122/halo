@@ -38,6 +38,8 @@ This repo is the web prototype: a Vite + React + TypeScript app plus a tiny loca
 - Structured output uses tool use with `strict: true` schemas. Strict schemas: keep every property required, no nullable/union types (limit is 16 across a request), `additionalProperties: false`. Absent values are empty strings, empty arrays, or `pick: "none"`.
 - Keep the system prompt and tool list byte-stable so they cache; put volatile context in the user message.
 - Optional provider: Google Gemini (`HALO_PROVIDER=gemini`, `server/llm/gemini.ts`) behind the same `LLMClient` interface, using the same tool schemas as JSON-schema function declarations. Free-tier pacing comes from `/api/health` limits: minimum interval between director calls, no mid-sentence triggers, and a cooldown when the provider returns a retry delay.
+- Optional providers: Kimi (Moonshot AI) and Qwen (Alibaba Cloud) through their OpenAI-compatible APIs (`HALO_PROVIDER=kimi|qwen`, `server/llm/openaiCompat.ts`). No request pacing. Optional request features (forced tool choice, strict, thinking switch, output cap) are dropped and remembered per model when the API rejects them. The server probes the endpoint and lists usable models at startup.
+- Keys are added with `npm run key <provider>` (`scripts/set-key.mjs`): hidden input, written to `.env` with mode 600. Never ask for a key in chat.
 
 ## Look and feel: as if Apple built it
 

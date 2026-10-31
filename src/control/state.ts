@@ -2,7 +2,7 @@
 // renders the StageState derived from it.
 
 import type { DataTable } from "../../shared/data";
-import type { DirectorAction, Proactivity } from "../../shared/director";
+import type { AIProvider, DirectorAction, Proactivity } from "../../shared/director";
 import type { Rect } from "../../shared/geometry";
 import type { Slot } from "../../shared/layout";
 import type { GlassTheme } from "../../shared/stage";
@@ -140,7 +140,7 @@ export interface ControlState {
   /** Messages for data files that could not be loaded. */
   dataErrors: string[];
   /** Which model provider the local server uses (for labels). */
-  ai: { provider: "anthropic" | "gemini" | null };
+  ai: { provider: AIProvider | null };
   hands: {
     enabled: boolean;
     status: "off" | "loading" | "running" | "error";

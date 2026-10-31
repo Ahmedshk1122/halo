@@ -13,6 +13,8 @@
     "test": "vitest run",
     "acceptance": "node scripts/acceptance.mjs",
     "setup:mediapipe": "node scripts/setup-mediapipe.mjs",
+    "key": "node scripts/set-key.mjs",
+    "model": "node scripts/set-key.mjs model",
     "postinstall": "node scripts/setup-mediapipe.mjs --wasm-only"
   },
   "dependencies": {

@@ -1,21 +1,23 @@
 import { serve } from "@hono/node-server";
 import { Hono, type Context } from "hono";
 import type { DirectorRequest } from "../shared/director";
-import { active, config } from "./config";
+import { active, config, keyName, limits } from "./config";
 import { decide, warm } from "./director/director";
 import { AnthropicLLM } from "./llm/anthropic";
 import { GeminiLLM } from "./llm/gemini";
+import { OpenAICompatLLM } from "./llm/openaiCompat";
 import type { LLMClient } from "./llm/types";
 import { plan } from "./planner/planner";
 
 // Tiny local API server. It holds the API key and proxies model calls for the
 // control window. It binds to 127.0.0.1 only.
 const app = new Hono();
+const compat = config.provider === "kimi" || config.provider === "qwen" ? new OpenAICompatLLM(config[config.provider]) : null;
 const llm: LLMClient =
-  config.provider === "gemini" ? new GeminiLLM(config.gemini.apiKey, config.gemini.thinkingLevel) : new AnthropicLLM(config.anthropic.apiKey);
-const keyName = config.provider === "gemini" ? "GEMINI_API_KEY" : "ANTHROPIC_API_KEY";
-const noKey = `${keyName} is not set in .env`;
-const directorOpts = { model: active.directorModel, effort: config.directorEffort };
+  compat ??
+  (config.provider === "gemini" ? new GeminiLLM(config.gemini.apiKey, config.gemini.thinkingLevel) : new AnthropicLLM(config.anthropic.apiKey));
+const noKey = `${keyName[config.provider]} is not set in .env. Run: npm run key ${config.provider === "anthropic" ? "claude" : config.provider}`;
+const directorOpts = { model: active.directorModel, effort: config.directorEffort, timeoutMs: config.directorTimeoutMs };
 
 app.get("/api/health", (c) =>
   c.json({
@@ -24,7 +26,7 @@ app.get("/api/health", (c) =>
     directorModel: active.directorModel,
     plannerModel: active.plannerModel,
     // Free-tier Gemini keys allow few requests a minute: pace the director and skip mid-sentence calls.
-    limits: config.provider === "gemini" ? { minIntervalMs: config.gemini.minIntervalMs, interimTriggers: false } : { minIntervalMs: 0, interimTriggers: true },
+    limits,
   }),
 );
 
@@ -67,4 +69,25 @@ app.post("/api/plan", async (c) => {
 
 serve({ fetch: app.fetch, port: config.port, hostname: "127.0.0.1" }, (info) => {
   console.log(`halo server on http://127.0.0.1:${info.port} · ${config.provider} · ${active.directorModel} (key ${llm.available ? "loaded" : "missing"})`);
+  if (compat?.available) void checkCompat(compat);
 });
+
+/** Kimi and Qwen: find the endpoint that takes the key and list the models it can use. */
+async function checkCompat(client: OpenAICompatLLM) {
+  const cfg = config[client.provider];
+  const res = await client.probe();
+  if (!res.ok) {
+    console.warn(`${cfg.label}: could not check the key (${res.status ?? "no response"}${res.message ? `: ${res.message.slice(0, 200)}` : ""}).`);
+    return;
+  }
+  console.log(`${cfg.label}: key works at ${client.endpoint}`);
+  if (res.models.length === 0) return;
+  console.log(`${cfg.label} models your key can use: ${res.models.join(", ")}`);
+  const prefix = client.provider.toUpperCase();
+  for (const [name, model] of [
+    [`${prefix}_DIRECTOR_MODEL`, cfg.directorModel],
+    [`${prefix}_PLANNER_MODEL`, cfg.plannerModel],
+  ]) {
+    if (!res.models.includes(model)) console.warn(`${cfg.label}: "${model}" is not in that list. Set ${name} in .env to one of them.`);
+  }
+}

@@ -80,7 +80,7 @@ export function ControlApp() {
           </div>
           <div className="status-line">
             <span className={`dot ${health.state === "ok" ? (health.hasKey ? "is-good" : "is-warn") : "is-bad"}`} />
-            {health.state === "ok" ? (health.hasKey ? `${aiName(health.provider)} ready · ${health.directorModel}` : "No API key in .env") : "Server offline"}
+            {health.state === "ok" ? (health.hasKey ? `${aiName(health.provider)} ready · ${health.directorModel}` : `No ${aiName(health.provider)} key in .env`) : "Server offline"}
           </div>
         </div>
       </aside>

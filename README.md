@@ -11,7 +11,7 @@ This is the web prototype. Halo renders a clean stage window in Chrome, OBS capt
 - macOS with Google Chrome (the Web Speech API and MediaPipe run in Chrome)
 - Node.js 20 or later
 - [OBS Studio](https://obsproject.com) 30 or later
-- An Anthropic API key
+- An API key for one model provider: Claude (Anthropic), Kimi (Moonshot AI), Qwen (Alibaba Cloud) or Gemini (Google)
 
 ## Setup
 
@@ -20,10 +20,10 @@ git clone https://github.com/Ahmedshk1122/halo.git
 cd halo
 npm install
 npm run setup:mediapipe   # downloads the hand and face models into public/mediapipe
-cp .env.example .env      # then put your key in ANTHROPIC_API_KEY
+npm run key claude        # or: npm run key kimi / qwen / gemini
 ```
 
-`.env` is gitignored. The key is read only by the local server and never reaches the browser.
+`npm run key` asks you to paste the key (it stays hidden), saves it to `.env` and switches Halo to that provider. `.env` is gitignored. The key is read only by the local server and never reaches the browser.
 
 ## Run
 
@@ -142,9 +142,31 @@ Models are set in `.env`:
 - The director's rules, tools and data catalog are prompt-cached, and pre-warmed when you start listening. The cache is refreshed every four minutes while you listen.
 - On models that support it (Opus 5.5, Sonnet 5.5), requests use Anthropic's server-side refusal fallback (`fallbacks: "default"`). The default Haiku director does not need it.
 
+### Using Kimi or Qwen instead
+
+Halo can run on Kimi (Moonshot AI) or Qwen (Alibaba Cloud Model Studio) through their OpenAI-compatible APIs:
+
+```bash
+npm run key kimi          # paste the key from platform.moonshot.ai
+npm run key qwen          # paste the key from Alibaba Cloud Model Studio
+```
+
+Then restart `npm run dev`. When the server starts it checks the key, picks the endpoint that accepts it (international or China), and prints the models the key can use. To change the model:
+
+```bash
+npm run model kimi-k3
+```
+
+- Defaults: `kimi-k3` for Kimi, `qwen-plus` for Qwen (`KIMI_DIRECTOR_MODEL` / `KIMI_PLANNER_MODEL`, `QWEN_DIRECTOR_MODEL` / `QWEN_PLANNER_MODEL`). A Kimi key runs Kimi models and a Qwen key runs Qwen models; they are different companies.
+- No pacing between requests: Halo decides as soon as speech arrives, mid-sentence included. If the provider asks it to slow down (a rate limit), it waits and carries on. `HALO_MIN_INTERVAL_MS` adds a gap if you want one.
+- Thinking is off for speed (`KIMI_THINKING` / `QWEN_THINKING`: `off`, `on` or `default`). Each decision may take up to 20 seconds (`HALO_DIRECTOR_TIMEOUT_MS`).
+- Providers differ in which request options they accept. When one is rejected (for example a forced tool call), Halo retries without it and remembers that for the model.
+- Same tools, same grounding: every number still has to be one you said or one in your data. Halo's prompts were written for Claude, so choices may differ.
+- `KIMI_BASE_URL` / `QWEN_BASE_URL` point Halo at another OpenAI-compatible endpoint.
+
 ### Using Gemini instead
 
-Halo can also run on Google Gemini, which has a free tier. In `.env`:
+Halo can also run on Google Gemini, which has a free tier: `npm run key gemini`, or in `.env`:
 
 ```
 HALO_PROVIDER=gemini
@@ -167,10 +189,12 @@ It uses the same tools and grounding. Defaults: `gemini-flash-lite-latest` for t
 
 ## Troubleshooting
 
-- **"Your credit balance is too low"** in the decision log: the Anthropic account has no credit. Add credit, or use Gemini (above).
+- **"Your credit balance is too low"** in the decision log: the Anthropic account has no credit. Add credit, or use another provider (above).
+- **"Model not found"** with Kimi or Qwen: the server terminal lists the models your key can use when it starts. Pick one with `npm run model <name>` and restart.
+- **"No credit left"** with Kimi or Qwen: add balance on the provider's platform.
 
 - **The stage freezes in OBS when another window covers it.** Start Chrome with the flags above (`./scripts/open-chrome.sh`).
-- **"No API key in .env"** in the sidebar. Put your key in `.env` and restart `npm run dev`.
+- **"No ... key in .env"** in the sidebar. Run `npm run key <provider>` and restart `npm run dev`.
 - **Hand tracking says it could not start.** Run `npm run setup:mediapipe`. Without local models it loads them from Google's CDN.
 - **Listening keeps restarting.** Chrome ends speech sessions after silence or about a minute; Halo restarts them automatically. Check the microphone permission for `localhost` if it never starts.
 
