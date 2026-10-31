@@ -31,15 +31,37 @@ const writeEnv = (text) => {
   writeFileSync(envPath, text, { mode: 0o600 });
   chmodSync(envPath, 0o600);
 };
-const getVar = (text, name) => text.match(new RegExp(`^[ \\t]*${name}[ \\t]*=(.*)$`, "m"))?.[1].trim() ?? "";
+const activeLine = (name) => new RegExp(`^\\s*(?:export\\s+)?${name}\\s*=(.*)$`);
+const commentedLine = (name) => new RegExp(`^\\s*#\\s*${name}\\s*=`);
 
-/** Sets NAME=value: replaces the active line, else fills in a commented example line, else appends. */
+/** The value Halo's server will see: like dotenv, the last line for a name wins. */
+function getVar(text, name) {
+  const re = activeLine(name);
+  let value = "";
+  for (const l of text.split("\n")) {
+    const m = l.match(re);
+    if (m) value = m[1].trim().replace(/^["']|["']$/g, "");
+  }
+  return value;
+}
+
+/**
+ * Sets NAME=value. Keeps exactly one active line for the name (a repeated line
+ * would win over the first one), else fills in a commented example line, else appends.
+ */
 function setVar(text, name, value) {
   const line = `${name}=${value}`;
-  const active = new RegExp(`^[ \\t]*${name}[ \\t]*=.*$`, "m");
-  if (active.test(text)) return text.replace(active, () => line);
-  const commented = new RegExp(`^[ \\t]*#[ \\t]*${name}[ \\t]*=.*$`, "m");
-  if (commented.test(text)) return text.replace(commented, () => line);
+  const re = activeLine(name);
+  const lines = text.split("\n");
+  if (lines.some((l) => re.test(l))) {
+    let kept = false;
+    return lines.flatMap((l) => (re.test(l) ? (kept ? [] : ((kept = true), [line])) : [l])).join("\n");
+  }
+  const i = lines.findIndex((l) => commentedLine(name).test(l));
+  if (i >= 0) {
+    lines[i] = line;
+    return lines.join("\n");
+  }
   return `${text.replace(/\n*$/, "\n")}${line}\n`;
 }
 
@@ -146,5 +168,10 @@ if (model) for (const name of provider.models) text = setVar(text, name, model);
 writeEnv(text);
 
 console.log(`Saved your ${provider.label} key to .env (ending ...${key.slice(-4)}). It stays on this computer and is never committed.`);
+const now = pick(getVar(text, "HALO_PROVIDER").toLowerCase());
+if (now !== provider) {
+  console.error(`Something else in .env still picks another provider. Open .env and remove the extra HALO_PROVIDER lines.`);
+  process.exit(1);
+}
 console.log(`Halo now uses ${provider.label} with ${getVar(text, provider.models[0]) || provider.fallback}.`);
 console.log(restart);

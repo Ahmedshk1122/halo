@@ -67,9 +67,18 @@ app.post("/api/plan", async (c) => {
   }
 });
 
-serve({ fetch: app.fetch, port: config.port, hostname: "127.0.0.1" }, (info) => {
+const server = serve({ fetch: app.fetch, port: config.port, hostname: "127.0.0.1" }, (info) => {
   console.log(`halo server on http://127.0.0.1:${info.port} · ${config.provider} · ${active.directorModel} (key ${llm.available ? "loaded" : "missing"})`);
   if (compat?.available) void checkCompat(compat);
+});
+
+// An older Halo server still running would keep answering with its old settings.
+server.on("error", (err: NodeJS.ErrnoException) => {
+  if (err.code !== "EADDRINUSE") throw err;
+  console.error(
+    `Port ${config.port} is already in use: Halo is probably still running in another Terminal window or tab. Press Ctrl+C there (or close it), then run npm run dev again.`,
+  );
+  process.exit(1);
 });
 
 /** Kimi and Qwen: find the endpoint that takes the key and list the models it can use. */
