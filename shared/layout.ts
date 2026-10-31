@@ -37,6 +37,12 @@ export function estimateLines(text: string, fontSize: number, maxWidth: number):
 }
 
 export const PAD = 36;
+/** Diagram drawing area (inside padding, below title and caption). */
+export function diagramArea(v: { aspect: "wide" | "square" | "tall"; caption: string }): Size {
+  const w = v.aspect === "wide" ? 900 : v.aspect === "tall" ? 600 : 680;
+  const h = v.aspect === "wide" ? 520 : v.aspect === "tall" ? 800 : 660;
+  return { w: w - PAD * 2, h: h - PAD * 2 - 46 - (v.caption ? 31 : 0) - 16 };
+}
 export const TITLE_LINE = 46; // 40px title line height
 export const BODY_LINE = 35; // 28px body line height
 
@@ -90,6 +96,8 @@ export function templateSize(v: ResolvedVisual): Size {
       return { w: 720, h: 620 + (v.caption ? 31 : 0) };
     case "goal":
       return { w: 560, h: 560 };
+    case "diagram":
+      return v.aspect === "wide" ? { w: 900, h: 520 } : v.aspect === "tall" ? { w: 600, h: 800 } : { w: 680, h: 660 };
     case "statement": {
       const innerW = 1100 - 88;
       const lines = Math.min(3, estimateLines(v.text, 56, innerW));

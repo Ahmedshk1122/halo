@@ -1,3 +1,5 @@
+import type { BackdropId } from "./backdrops";
+
 // Visual specs. A spec is what the director (or planner) produces: JSON with
 // data references instead of numbers. The app resolves references against the
 // loaded data and produces a ResolvedVisual, which is the only thing templates
@@ -15,6 +17,7 @@ export const TEMPLATE_IDS = [
   "ui_sketch",
   "statement",
   "goal",
+  "diagram",
 ] as const;
 export type TemplateId = (typeof TEMPLATE_IDS)[number];
 
@@ -30,6 +33,7 @@ export const TEMPLATE_LABELS: Record<TemplateId, string> = {
   ui_sketch: "UI sketch",
   statement: "Statement",
   goal: "From → to",
+  diagram: "Diagram",
 };
 
 /** Lucide icons the director may pick from. Kept short so the model chooses well. */
@@ -255,6 +259,85 @@ export interface GoalSpec extends SpecBase {
   good_direction: "up" | "down";
 }
 
+// ---------------------------------------------------------------------------
+// Diagram: any visual composed from simple parts on a 0–100 canvas
+// (x to the right, y down). Frameworks, segment maps, matrices, factors,
+// mechanisms, anatomy (human_body backdrop), racing (race_track backdrop).
+// ---------------------------------------------------------------------------
+
+export type DiagramTone = "accent" | "neutral" | "highlight" | "muted";
+
+export interface DiagramRegion {
+  label: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  shape: "rect" | "ellipse";
+  tone: DiagramTone;
+  cue: string;
+}
+
+export interface DiagramNode {
+  id: string;
+  label: string;
+  detail: string;
+  /** Center of the node. */
+  x: number;
+  y: number;
+  /** Size; 0 means fit the text. */
+  w: number;
+  h: number;
+  shape: "rect" | "pill" | "circle" | "diamond" | "none";
+  tone: DiagramTone;
+  icon: IconName | "none";
+  cue: string;
+}
+
+export interface DiagramLink {
+  from: string;
+  to: string;
+  label: string;
+  style: "arrow" | "line" | "dashed";
+  tone: DiagramTone;
+  cue: string;
+}
+
+export interface DiagramPath {
+  id: string;
+  label: string;
+  points: { x: number; y: number }[];
+  closed: boolean;
+  arrow: boolean;
+  tone: DiagramTone;
+  cue: string;
+}
+
+export interface DiagramMarker {
+  id: string;
+  label: string;
+  /** A backdrop anchor name ("heart", "turn_3"); empty to use x and y. */
+  anchor: string;
+  x: number;
+  y: number;
+  kind: "dot" | "pin" | "car";
+  tone: DiagramTone;
+  cue: string;
+}
+
+export interface DiagramSpec extends SpecBase {
+  template: "diagram";
+  caption: string;
+  aspect: "wide" | "square" | "tall";
+  backdrop: BackdropId;
+  reveal: RevealMode;
+  regions: DiagramRegion[];
+  nodes: DiagramNode[];
+  links: DiagramLink[];
+  paths: DiagramPath[];
+  markers: DiagramMarker[];
+}
+
 export type VisualSpec =
   | MetricSpec
   | LineSpec
@@ -266,7 +349,8 @@ export type VisualSpec =
   | ProcessSpec
   | UISketchSpec
   | StatementSpec
-  | GoalSpec;
+  | GoalSpec
+  | DiagramSpec;
 
 // ---------------------------------------------------------------------------
 // Resolved visuals (what templates render)
@@ -424,7 +508,34 @@ export type ResolvedVisual =
   | RProcess
   | RUISketch
   | RStatement
-  | RGoal;
+  | RGoal
+  | RDiagram;
+
+export interface RDiagram {
+  template: "diagram";
+  title: string;
+  caption: string;
+  aspect: DiagramSpec["aspect"];
+  backdrop: BackdropId;
+  reveal: RevealMode;
+  regions: DiagramRegion[];
+  nodes: DiagramNode[];
+  links: DiagramLink[];
+  paths: DiagramPath[];
+  /** Markers with anchors resolved to coordinates. */
+  markers: DiagramMarker[];
+  accent: Accent;
+}
+
+/** Cues of a diagram in reveal order (first appearance), without repeats. */
+export function diagramCues(v: Pick<RDiagram, "regions" | "nodes" | "links" | "paths" | "markers">): string[] {
+  const seen: string[] = [];
+  for (const e of [...v.regions, ...v.nodes, ...v.links, ...v.paths, ...v.markers]) {
+    const c = e.cue?.trim();
+    if (c && !seen.includes(c)) seen.push(c);
+  }
+  return seen;
+}
 
 /** Number of items a template reveals progressively (0 if it doesn't). */
 export function revealCount(v: ResolvedVisual): number {
@@ -435,6 +546,8 @@ export function revealCount(v: ResolvedVisual): number {
       return v.reveal === "progressive" ? v.items.length : 0;
     case "process":
       return v.reveal === "progressive" ? v.steps.length : 0;
+    case "diagram":
+      return v.reveal === "progressive" ? diagramCues(v).length : 0;
     default:
       return 0;
   }
@@ -449,6 +562,8 @@ export function revealCues(v: ResolvedVisual): string[] {
       return v.items.map((p) => p.cue);
     case "process":
       return v.steps.map((p) => p.cue);
+    case "diagram":
+      return diagramCues(v);
     default:
       return [];
   }

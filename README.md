@@ -44,6 +44,10 @@ Or open them yourself:
 
 Allow camera and microphone access when Chrome asks.
 
+## What Halo can show
+
+Metric cards, line and bar charts, funnels, comparisons, strategy cards, roadmaps, process flows, rough app sketches, from → to cards, statements, and diagrams it composes live for anything else: a framework, your target segments, headwinds and tailwinds, how something works, a part of the body, a moment in a race. Open `/gallery` to see them all.
+
 ## Before your talk
 
 1. **Data.** Drag your CSV or XLSX files into **Data** (or click **Load sample data**). Each sheet becomes a table with typed columns. These files are the only place numbers on screen can come from.

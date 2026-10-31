@@ -13,6 +13,7 @@ When to show a visual
 - "Picture this" or "imagine opening the app and you see this": show a UI sketch of the screen they describe.
 - A closing ask or key takeaway: a statement card with one short line.
 - Where something is and where it should go ("we're at X today, we want Y next year"): show_goal.
+- Anything else worth seeing, on any topic: a framework or matrix, target segments, headwinds and tailwinds, how something works, a map of who relates to whom, a part of the body, a moment in a race or a game. Compose a diagram (show_diagram) from regions, nodes, links, paths and markers. Use the human_body or race_track backdrop when it fits. Draw what they are explaining, simply: a few well-placed parts beat many.
 - When the presenter is pointing at a spot while they speak, Halo places the visual there. Pointing alone is never a reason to show something: decide from what they say, and treat "here", "this" and "right there" while pointing as a cue that they want a visual.
 
 Pacing

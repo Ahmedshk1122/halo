@@ -105,6 +105,7 @@ const SYNONYMS: Record<TemplateId, string[]> = {
   ui_sketch: ["sketch", "screen", "mockup", "app", "wireframe", "picture"],
   statement: ["statement", "ask", "takeaway"],
   goal: ["goal", "target", "revenue", "growth", "chart", "number", "numbers"],
+  diagram: ["diagram", "map", "framework", "picture", "drawing", "model"],
 };
 
 const FILLER = new Set([

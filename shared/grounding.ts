@@ -209,6 +209,17 @@ export function textFields(spec: VisualSpec): { field: string; text: string }[] 
       push("from_label", spec.from_label);
       push("to_label", spec.to_label);
       break;
+    case "diagram":
+      push("caption", spec.caption);
+      spec.regions.forEach((r, i) => push(`regions[${i}].label`, r.label));
+      spec.nodes.forEach((n, i) => {
+        push(`nodes[${i}].label`, n.label);
+        push(`nodes[${i}].detail`, n.detail);
+      });
+      spec.links.forEach((l, i) => push(`links[${i}].label`, l.label));
+      spec.paths.forEach((p, i) => push(`paths[${i}].label`, p.label));
+      spec.markers.forEach((m, i) => push(`markers[${i}].label`, m.label));
+      break;
     case "statement":
       push("kicker", spec.kicker);
       push("text", spec.text);

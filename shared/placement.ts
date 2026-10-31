@@ -71,7 +71,7 @@ function orderSlots(prefs: Slot[], keepOut: Rect | null): Slot[] {
   return all;
 }
 
-const SCALES = [1, 0.9, 0.8, 0.7];
+const SCALES = [1, 0.9, 0.8, 0.7, 0.62, 0.55];
 
 export function placeVisual(size: Size, prefs: Slot[], occupied: Rect[], keepOut: Rect | null): Placement | null {
   const slots = orderSlots(prefs, keepOut);
@@ -83,6 +83,14 @@ export function placeVisual(size: Size, prefs: Slot[], occupied: Rect[], keepOut
         if (isFree(box, occupied, keepOut)) {
           return { frame: frameFromEffective(box, size, scale), scale, slot };
         }
+      }
+    }
+  }
+  // Nothing fits beside the others: overlap them if needed, but never the face.
+  for (const scale of SCALES) {
+    for (const slot of slots) {
+      for (const box of slotCandidates(slot, size.w * scale, size.h * scale)) {
+        if (isFree(box, [], keepOut)) return { frame: frameFromEffective(box, size, scale), scale, slot };
       }
     }
   }

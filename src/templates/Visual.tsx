@@ -1,6 +1,7 @@
 import type { ResolvedVisual } from "../../shared/visuals";
 import { BarChart } from "./BarChart";
 import { Comparison } from "./Comparison";
+import { DiagramCard } from "./DiagramCard";
 import { Funnel } from "./Funnel";
 import { GoalCard } from "./GoalCard";
 import { LineChart } from "./LineChart";
@@ -42,5 +43,7 @@ export function VisualContent({ v, ctx }: { v: ResolvedVisual; ctx: TemplateCont
       return <StatementCard v={v} />;
     case "goal":
       return <GoalCard v={v} />;
+    case "diagram":
+      return <DiagramCard v={v} reveal={ctx.reveal} />;
   }
 }

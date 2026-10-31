@@ -40,6 +40,7 @@ import {
   AppWindow,
   Quote,
   Goal,
+  Shapes,
 } from "lucide-react";
 import type { IconName, TemplateId } from "../../shared/visuals";
 
@@ -91,11 +92,18 @@ const TEMPLATE_ICONS: Record<TemplateId, LucideIcon> = {
   ui_sketch: AppWindow,
   statement: Quote,
   goal: Goal,
+  diagram: Shapes,
 };
 
 export function Icon({ name, size, className }: { name: IconName; size: number; className?: string }) {
   const Component = ICONS[name] ?? Sparkles;
   return <Component size={size} strokeWidth={ICON_STROKE} className={className} aria-hidden />;
+}
+
+/** An icon placed inside an SVG drawing (diagrams). */
+export function SvgIcon({ name, x, y, size, color }: { name: IconName; x: number; y: number; size: number; color: string }) {
+  const Component = ICONS[name] ?? Sparkles;
+  return <Component x={x} y={y} width={size} height={size} strokeWidth={ICON_STROKE} color={color} aria-hidden />;
 }
 
 export function TemplateIcon({ template, size }: { template: TemplateId; size: number }) {

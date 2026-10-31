@@ -3,10 +3,13 @@
 // cannot be grounded rejects the visual.
 
 import { formatDelta, formatLabel, formatValue, normalizeName, type DataColumn, type DataTable } from "./data";
+import { BACKDROPS, BACKDROP_IDS } from "./backdrops";
 import { scanSpec, type GroundingViolation } from "./grounding";
 import { wasSaid, type SpokenNumber } from "./spoken";
 import type {
   Accent,
+  DiagramSpec,
+  RDiagram,
   ResolvedDelta,
   SaidUnit,
   MetricSpec,
@@ -228,7 +231,127 @@ export function tidySpec(spec: VisualSpec): VisualSpec {
       return { ...spec, ...base, kicker: tidy(spec.kicker, 28), text: tidy(spec.text, 90) };
     case "goal":
       return { ...spec, ...base, from: tidyRef(spec.from), to: tidyRef(spec.to), from_label: tidy(spec.from_label, 24), to_label: tidy(spec.to_label, 24) };
+    case "diagram":
+      return tidyDiagram({ ...spec, ...base });
   }
+}
+
+const pct = (n: unknown, fallback = 50) => {
+  const v = Number(n);
+  return Number.isFinite(v) ? Math.min(100, Math.max(0, v)) : fallback;
+};
+const toneOf = (t: unknown) => (t === "accent" || t === "highlight" || t === "muted" ? t : "neutral");
+
+/** Copy rules, limits and sane coordinates for a composed diagram. */
+function tidyDiagram(spec: DiagramSpec): DiagramSpec {
+  const cue = (c: unknown) => tidy(String(c ?? ""), 40);
+  return {
+    ...spec,
+    caption: tidy(spec.caption ?? "", 60),
+    // A backdrop decides the shape it reads best in; otherwise the model's choice.
+    aspect:
+      spec.backdrop && spec.backdrop !== "none" && BACKDROPS[spec.backdrop as keyof typeof BACKDROPS]
+        ? BACKDROPS[spec.backdrop as keyof typeof BACKDROPS].diagramAspect
+        : spec.aspect === "wide" || spec.aspect === "tall"
+          ? spec.aspect
+          : "square",
+    backdrop: (BACKDROP_IDS as readonly string[]).includes(spec.backdrop) ? spec.backdrop : "none",
+    reveal: spec.reveal === "progressive" ? "progressive" : "all",
+    regions: (spec.regions ?? []).slice(0, 6).map((r) => ({
+      ...r,
+      label: tidy(r.label, 28),
+      x: pct(r.x, 10),
+      y: pct(r.y, 10),
+      w: pct(r.w, 40),
+      h: pct(r.h, 40),
+      shape: r.shape === "ellipse" ? "ellipse" : "rect",
+      tone: toneOf(r.tone),
+      cue: cue(r.cue),
+    })),
+    nodes: (spec.nodes ?? []).slice(0, 14).map((n, i) => ({
+      ...n,
+      id: String(n.id || `n${i + 1}`),
+      label: tidy(n.label, 32),
+      detail: tidy(n.detail ?? "", 44),
+      x: pct(n.x, 0),
+      y: pct(n.y, 0),
+      w: pct(n.w, 0),
+      h: pct(n.h, 0),
+      shape: (["rect", "pill", "circle", "diamond", "none"] as const).includes(n.shape) ? n.shape : "rect",
+      tone: toneOf(n.tone),
+      icon: n.icon ?? "none",
+      cue: cue(n.cue),
+    })),
+    links: (spec.links ?? []).slice(0, 16).map((l) => ({
+      ...l,
+      label: tidy(l.label ?? "", 24),
+      style: l.style === "line" || l.style === "dashed" ? l.style : "arrow",
+      tone: toneOf(l.tone),
+      cue: cue(l.cue),
+    })),
+    paths: (spec.paths ?? []).slice(0, 6).map((p, i) => ({
+      ...p,
+      id: String(p.id || `p${i + 1}`),
+      label: tidy(p.label ?? "", 24),
+      points: (p.points ?? []).slice(0, 16).map((q) => ({ x: pct(q.x), y: pct(q.y) })),
+      closed: !!p.closed,
+      arrow: !!p.arrow,
+      tone: toneOf(p.tone),
+      cue: cue(p.cue),
+    })),
+    markers: (spec.markers ?? []).slice(0, 12).map((m, i) => ({
+      ...m,
+      id: String(m.id || `m${i + 1}`),
+      label: tidy(m.label ?? "", 28),
+      anchor: String(m.anchor ?? "").trim().toLowerCase().replace(/\s+/g, "_"),
+      x: pct(m.x),
+      y: pct(m.y),
+      kind: m.kind === "pin" || m.kind === "car" ? m.kind : "dot",
+      tone: toneOf(m.tone),
+      cue: cue(m.cue),
+    })),
+  };
+}
+
+/** Anchors resolved, links to missing nodes dropped, and a tidy layout when the model gave none. */
+function resolveDiagram(spec: DiagramSpec): RDiagram {
+  const backdrop = spec.backdrop === "none" ? null : BACKDROPS[spec.backdrop];
+  const markers = spec.markers
+    .map((m) => {
+      if (!m.anchor) return m;
+      const a = backdrop?.anchors[m.anchor];
+      return a ? { ...m, x: a.x, y: a.y } : null;
+    })
+    .filter((m): m is DiagramSpec["markers"][number] => m !== null);
+  // Nodes stacked on one spot (no layout given): spread them in rows.
+  let nodes = spec.nodes;
+  const spots = new Set(nodes.map((n) => `${Math.round(n.x / 4)},${Math.round(n.y / 4)}`));
+  if (nodes.length > 1 && spots.size < nodes.length) {
+    const cols = nodes.length <= 3 ? nodes.length : Math.ceil(nodes.length / 2);
+    const rows = Math.ceil(nodes.length / cols);
+    nodes = nodes.map((n, i) => ({
+      ...n,
+      x: ((i % cols) + 0.5) * (100 / cols),
+      y: (Math.floor(i / cols) + 0.5) * (100 / rows),
+    }));
+  }
+  const ids = new Set(nodes.map((n) => n.id));
+  const links = spec.links.filter((l) => ids.has(l.from) && ids.has(l.to) && l.from !== l.to);
+  const paths = spec.paths.filter((p) => p.points.length >= 2);
+  return {
+    template: "diagram",
+    title: spec.title,
+    caption: spec.caption,
+    aspect: spec.aspect,
+    backdrop: spec.backdrop,
+    reveal: spec.reveal,
+    regions: spec.regions,
+    nodes,
+    links,
+    paths,
+    markers,
+    accent: "blue",
+  };
 }
 
 function checkShape(spec: VisualSpec): string[] {
@@ -255,6 +378,9 @@ function checkShape(spec: VisualSpec): string[] {
       break;
     case "goal":
       if (spec.from?.pick === "none" || spec.to?.pick === "none") errors.push("goal needs a from value and a to value");
+      break;
+    case "diagram":
+      if (spec.regions.length + spec.nodes.length + spec.paths.length + spec.markers.length === 0) errors.push("diagram needs at least one part");
       break;
     default:
       break;
@@ -417,6 +543,13 @@ function resolve(spec: VisualSpec, tables: DataTable[], said: SpokenNumber[]): R
         change: { display: formatDelta(diff, columnOf(from, tables), from.value), direction, since: "" },
         accent: direction === "flat" ? "blue" : direction === good ? "green" : "red",
       };
+    }
+    case "diagram": {
+      const d = resolveDiagram(spec);
+      if (d.regions.length + d.nodes.length + d.paths.length + d.markers.length === 0) {
+        throw new RefError("diagram markers point at anchors that don't exist");
+      }
+      return d;
     }
   }
 }

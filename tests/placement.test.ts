@@ -43,3 +43,18 @@ describe("settleManual", () => {
     expect(r.x).toBeLessThan(face.x);
   });
 });
+
+describe("never over the face", () => {
+  it("shrinks a wide visual rather than covering the face", () => {
+    const p = placeVisual({ w: 1040, h: 560 }, ["left", "right"], [], face)!;
+    expect(p).not.toBeNull();
+    expect(intersects(effectiveRect(p.frame, p.scale), face)).toBe(false);
+  });
+
+  it("overlaps another visual before it would cover the face", () => {
+    const other = { x: 48, y: 128, w: 600, h: 900 };
+    const p = placeVisual({ w: 600, h: 500 }, ["left"], [other, { x: 1250, y: 128, w: 620, h: 900 }], face)!;
+    expect(p).not.toBeNull();
+    expect(intersects(effectiveRect(p.frame, p.scale), face)).toBe(false);
+  });
+});

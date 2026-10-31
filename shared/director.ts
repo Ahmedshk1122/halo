@@ -3,6 +3,7 @@
 // maps back to a decision. Shared by the server, the offline replay director
 // and the tests.
 
+import { BACKDROP_IDS, backdropAnchors } from "./backdrops";
 import { ICON_NAMES, UI_BLOCK_KINDS, type TemplateId, type VisualSpec } from "./visuals";
 
 export type Proactivity = "quiet" | "balanced" | "eager";
@@ -146,6 +147,8 @@ const seriesRef = (description: string) =>
   );
 
 const icon = enm(ICON_NAMES, "Icon that matches the item.");
+const tone = enm(["accent", "neutral", "highlight", "muted"], "accent: the main thing; highlight: what the presenter is pointing out (orange); neutral; muted: background.");
+const diagramCue = str("With reveal progressive: two to four words the presenter says when this part should appear. Empty to show it at once.");
 const cue = str("Two to four distinctive words the presenter says for this item, from their wording. Reveals the item as they say it.");
 const reveal = enm(["progressive", "all"], "progressive: items appear as the presenter says each cue. all: everything at once.");
 const title = str("Two to five words, sentence case, no numbers. Also the chip label when tucked.");
@@ -209,6 +212,80 @@ const TEMPLATE_PROPS: Record<TemplateId, Record<string, JsonSchema>> = {
       "One to four blocks, top to bottom.",
     ),
   },
+  diagram: {
+    caption: str("Short line under the title, or empty."),
+    aspect: enm(["wide", "square", "tall"], "Shape of the drawing area."),
+    backdrop: enm(
+      BACKDROP_IDS,
+      `A ready-made drawing to mark up, or none. human_body anchors: ${backdropAnchors("human_body").join(", ")}. race_track anchors: ${backdropAnchors("race_track").join(", ")}.`,
+    ),
+    reveal: enm(["progressive", "all"], "progressive: parts with a cue appear as the presenter says it. all: everything at once."),
+    regions: arr(
+      obj({
+        label: str("One to three words, or empty."),
+        x: num("Left edge, 0-100."),
+        y: num("Top edge, 0-100."),
+        w: num("Width, 0-100."),
+        h: num("Height, 0-100."),
+        shape: enm(["rect", "ellipse"], "Quadrants and groups: rect. Overlapping sets: ellipse."),
+        tone: tone,
+        cue: diagramCue,
+      }),
+      "Background areas: quadrants, groups, sets. Often empty.",
+    ),
+    nodes: arr(
+      obj({
+        id: str("Short unique id, used by links."),
+        label: str("One to four words."),
+        detail: str("Optional short line, or empty."),
+        x: num("Center x, 0-100."),
+        y: num("Center y, 0-100."),
+        w: num("Width 0-100, or 0 to fit the text."),
+        h: num("Height 0-100, or 0 to fit the text."),
+        shape: enm(["rect", "pill", "circle", "diamond", "none"], "none is a floating label."),
+        tone: tone,
+        icon: enm([...ICON_NAMES, "none"], "Icon beside the label, or none."),
+        cue: diagramCue,
+      }),
+      "The labeled boxes or bubbles of the diagram.",
+    ),
+    links: arr(
+      obj({
+        from: str("Node id."),
+        to: str("Node id."),
+        label: str("One to three words, or empty."),
+        style: enm(["arrow", "line", "dashed"], "arrow for flow or cause, line for relation, dashed for weak or planned."),
+        tone: tone,
+        cue: diagramCue,
+      }),
+      "Connections between nodes.",
+    ),
+    paths: arr(
+      obj({
+        id: str("Short unique id."),
+        label: str("One to three words, or empty."),
+        points: arr(obj({ x: num("0-100."), y: num("0-100.") }), "Two to twelve points along the route; drawn as a smooth curve."),
+        closed: bool("Close the shape."),
+        arrow: bool("Arrowhead at the end."),
+        tone: tone,
+        cue: diagramCue,
+      }),
+      "Routes and movements: a racing line, an overtake, a journey, a flow. Often empty.",
+    ),
+    markers: arr(
+      obj({
+        id: str("Short unique id."),
+        label: str("One to three words."),
+        anchor: str("A backdrop anchor name to place it on, or empty to use x and y."),
+        x: num("0-100 when no anchor, else 0."),
+        y: num("0-100 when no anchor, else 0."),
+        kind: enm(["dot", "pin", "car"], "dot for a point or part, pin for a place, car for a vehicle or player."),
+        tone: tone,
+        cue: diagramCue,
+      }),
+      "Labeled points: body parts, cars, places, positions.",
+    ),
+  },
   goal: {
     from: scalarRef("Where things are now (often pick said)."),
     to: scalarRef("Where they want to be (often pick said)."),
@@ -234,6 +311,8 @@ const TOOL_DESCRIPTIONS: Record<TemplateId, string> = {
   ui_sketch: "Show a rough wireframe of an app screen when the presenter asks the audience to picture a screen.",
   statement: "Show one short line, for a closing ask or key takeaway.",
   goal: "Show where something is and where it should go: two values side by side with the change, e.g. revenue today versus the target.",
+  diagram:
+    "Draw anything worth seeing that the other visuals don't fit: a framework or matrix, target segments, factors (headwinds and tailwinds), a mechanism, a map of relationships, anatomy (backdrop human_body), a race or play-by-play (backdrop race_track). Compose it from regions, nodes, links, paths and markers on a 0-100 canvas, x to the right and y down. Keep it simple: three to twelve parts, labels of one to four words, nothing overlapping.",
 };
 
 export const TOOL_FOR_TEMPLATE: Record<TemplateId, string> = {
@@ -248,6 +327,7 @@ export const TOOL_FOR_TEMPLATE: Record<TemplateId, string> = {
   ui_sketch: "show_ui_sketch",
   statement: "show_statement",
   goal: "show_goal",
+  diagram: "show_diagram",
 };
 
 export const TEMPLATE_FOR_TOOL: Record<string, TemplateId> = Object.fromEntries(

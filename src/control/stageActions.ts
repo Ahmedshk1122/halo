@@ -8,6 +8,7 @@ import { now } from "../sync/channel";
 import { store, type ControlState, type VisualInstance, type VisualSource } from "./state";
 
 export const MAX_ON_STAGE = 2;
+const SAFE_FALLBACK_X = 48;
 
 function patchVisual(state: ControlState, id: string, patch: Partial<VisualInstance>): ControlState["visuals"] {
   const v = state.visuals[id];
@@ -107,12 +108,19 @@ function bringOnStage(id: string) {
     state = store.get();
     placement = placeVisual(size, preferredSlots(v.visual), occupiedRects(state, [id]), state.keepOut);
   }
-  const frame = placement?.frame ?? { x: 48, y: CONTENT_TOP, ...size };
+  // Last resort: the smallest size, moved off the face.
+  const fallbackScale = 0.55;
+  const fallback = settleManual(
+    { x: SAFE_FALLBACK_X, y: CONTENT_TOP, w: size.w * fallbackScale, h: size.h * fallbackScale },
+    [],
+    state.keepOut,
+  );
+  const frame = placement?.frame ?? frameFromEffective(fallback, size, fallbackScale);
   store.set((s) => ({
     visuals: patchVisual(s, id, {
       status: "onscreen",
       frame,
-      scale: placement?.scale ?? 0.7,
+      scale: placement?.scale ?? fallbackScale,
       slot: placement?.slot ?? "left",
       userPlaced: false,
       expanded: false,
