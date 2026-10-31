@@ -88,6 +88,8 @@ export function templateSize(v: ResolvedVisual): Size {
     }
     case "ui_sketch":
       return { w: 720, h: 620 + (v.caption ? 31 : 0) };
+    case "goal":
+      return { w: 560, h: 560 };
     case "statement": {
       const innerW = 1100 - 88;
       const lines = Math.min(3, estimateLines(v.text, 56, innerW));

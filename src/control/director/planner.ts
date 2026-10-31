@@ -4,6 +4,7 @@ import replayPlan from "../../../fixtures/replay_plan.json";
 import { describeCatalog } from "../../../shared/data";
 import { specFromToolInput, TEMPLATE_FOR_TOOL } from "../../../shared/director";
 import { prepareVisual } from "../../../shared/resolve";
+import { spokenNumbers } from "../../../shared/spoken";
 import type { TemplateId, VisualSpec } from "../../../shared/visuals";
 import { store, type PreparedVisual } from "../state";
 
@@ -40,8 +41,10 @@ export async function prepareFromNotes(notes: string): Promise<{ prepared: Prepa
   const started = performance.now();
   const result = store.get().director.provider === "replay" ? fromReplay() : await fromServer(notes);
   const tables = store.get().tables;
+  // Numbers written in the notes count as the presenter's own words.
+  const said = spokenNumbers(notes);
   const prepared: PreparedVisual[] = result.visuals.map((p) => {
-    const r = prepareVisual(p.spec, tables);
+    const r = prepareVisual(p.spec, tables, { said });
     return {
       id: p.id,
       when: p.when,
@@ -50,6 +53,7 @@ export async function prepareFromNotes(notes: string): Promise<{ prepared: Prepa
       spec: r.ok ? r.spec : p.spec,
       visual: r.ok ? r.visual : null,
       errors: r.ok ? [] : r.errors,
+      said,
     };
   });
   store.set({ prepared });

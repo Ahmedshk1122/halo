@@ -1,9 +1,11 @@
 // Grounding check. Every generated text field is scanned before rendering.
 // Month, quarter and year names and small item counts ("three steps") are
-// fine. Any other number, percentage or currency rejects the visual: numbers
-// may only reach the screen through data references.
+// fine. Any other number, percentage or currency rejects the visual unless the
+// presenter said it: numbers reach the screen through data references, or
+// because the presenter said them out loud. Halo never invents a number.
 
-import type { VisualSpec } from "./visuals";
+import { spokenNumbers, wasSaid, type SpokenNumber } from "./spoken";
+import type { ScalarRef, SeriesRef, VisualSpec } from "./visuals";
 
 export interface GroundingViolation {
   field: string;
@@ -203,14 +205,49 @@ export function textFields(spec: VisualSpec): { field: string; text: string }[] 
         b.items.forEach((it, j) => push(`blocks[${i}].items[${j}]`, it));
       });
       break;
+    case "goal":
+      push("from_label", spec.from_label);
+      push("to_label", spec.to_label);
+      break;
     case "statement":
       push("kicker", spec.kicker);
       push("text", spec.text);
       break;
   }
+  // Labels on values and points the presenter said are generated text too.
+  const ref = (name: string, r: ScalarRef | undefined) => r?.pick === "said" && push(`${name}.said_label`, r.said_label ?? "");
+  const series = (name: string, s: SeriesRef | undefined) =>
+    s?.table === "said" && (s.said_points ?? []).forEach((p, i) => push(`${name}.said_points[${i}]`, p.label));
+  if (spec.template === "metric") {
+    ref("value", spec.value);
+    ref("baseline", spec.baseline);
+    series("trend", spec.trend);
+  } else if (spec.template === "comparison") {
+    ref("a.value", spec.a.value);
+    ref("b.value", spec.b.value);
+  } else if (spec.template === "goal") {
+    ref("from", spec.from);
+    ref("to", spec.to);
+  } else if (spec.template === "line" || spec.template === "bar") {
+    series("series", spec.series);
+  } else if (spec.template === "funnel") {
+    series("steps", spec.steps);
+  }
   return f;
 }
 
-export function scanSpec(spec: VisualSpec): GroundingViolation[] {
-  return textFields(spec).flatMap(({ field, text }) => scanText(text, field));
+/**
+ * Scans every text field. A flagged number is allowed when it is one the
+ * presenter said (`said`, from the transcript); everything else rejects.
+ */
+export function scanSpec(spec: VisualSpec, said: SpokenNumber[] = []): GroundingViolation[] {
+  return textFields(spec).flatMap(({ field, text }) => {
+    const found = scanText(text, field);
+    if (found.length === 0 || said.length === 0) return found;
+    const inText = spokenNumbers(text).filter((n) => wasSaid(n.value, said));
+    return found.filter((v) => {
+      const at = text.indexOf(v.match);
+      return !inText.some((n) => at >= n.start && at < n.end);
+    });
+  });
 }

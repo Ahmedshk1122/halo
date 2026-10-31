@@ -6,13 +6,17 @@
 
 import { describeCatalog } from "../../../shared/data";
 import type { DirectorDecision, DirectorRequest, Proactivity, TranscriptLine, VisualRef } from "../../../shared/director";
+import { STAGE_W, type Point } from "../../../shared/geometry";
 import { prepareVisual } from "../../../shared/resolve";
+import { spokenNumbers, type SpokenNumber } from "../../../shared/spoken";
+import { steadyPoint } from "../hands/pointing";
 import { countRevealed, wordCount } from "../../../shared/reveal";
 import { revealCount, revealCues } from "../../../shared/visuals";
 import type { SpeechEvent, SpeechSource, SpeechState } from "../../speech/types";
 import { now } from "../../sync/channel";
 import {
   clearStage,
+  dismissVisual,
   recallVisual,
   setReveal,
   showVisual,
@@ -30,6 +34,8 @@ export const INTERIM_TRIGGER_WORDS = 12;
 export const SPACING_SEC: Record<Proactivity, number> = { quiet: 10, balanced: 6, eager: 4 };
 /** Director visuals: items already said are revealed by this time even if cues were paraphrased. */
 const DIRECTOR_REVEAL_GRACE_MS = 3000;
+/** A goal card can be grown by a raised pointing hand for this long after it appears or changes. */
+const GROWABLE_MS = 20_000;
 /** Prepared visuals: reveal the next item after this many words without a cue match. */
 const PREPARED_REVEAL_WORDS = 40;
 
@@ -196,7 +202,7 @@ class Director {
       if (generation !== this.generation) return;
       this.patchLog(logId, { requestMs: Math.round(now() - sentAt), modelMs: res.timing.modelMs, model: res.model });
       this.decidedThrough = Math.max(this.decidedThrough, newThrough);
-      this.apply(res.decision, { logId, speechEndAt: t.speechEndAt, explicit: t.trigger === "request", cueFrom });
+      this.apply(res.decision, { logId, speechEndAt: t.speechEndAt, explicit: t.trigger === "request", cueFrom, speechStart: cueFrom + 15_000 });
     } catch (err) {
       const retryAfterSec = (err as { retryAfterSec?: number }).retryAfterSec;
       if (retryAfterSec) this.cooldownUntil = now() + retryAfterSec * 1000;
@@ -229,7 +235,7 @@ class Director {
     const s = store.get();
     this.apply(
       { action: "show", reason, beat: s.arc.beat, arc: s.arc.summary, targetIds: [], tuckIds: [], preparedId: id, visual: null },
-      { logId, speechEndAt: from?.speechEndAt ?? t, explicit: true, cueFrom: (from?.speechEndAt ?? t) - 15_000 },
+      { logId, speechEndAt: from?.speechEndAt ?? t, explicit: true, cueFrom: (from?.speechEndAt ?? t) - 15_000, speechStart: (from?.speechEndAt ?? t) - 5_000 },
     );
   }
 
@@ -287,6 +293,7 @@ class Director {
       prepared: s.prepared.filter((p) => p.visual).map((p) => ({ id: p.id, template: p.template, title: p.title, when: p.when })),
       proactivity: s.director.proactivity,
       request,
+      pointing: steadyPoint(firstNew - 1000, t) !== null,
     };
     const newThrough = recent.length ? recent[recent.length - 1].id : this.decidedThrough;
     return { req, newThrough, said, label, cueFrom: firstNew - 15_000 };
@@ -296,7 +303,21 @@ class Director {
   // Applying decisions
   // -------------------------------------------------------------------------
 
-  private apply(d: DirectorDecision, ctx: { logId: number; speechEndAt: number; explicit: boolean; cueFrom: number }) {
+  /** Numbers the presenter said in the last two minutes (said values must be among them). */
+  private saidRecently(): SpokenNumber[] {
+    const s = store.get();
+    const t = now();
+    const text = [...s.transcript.filter((l) => t - l.at <= 120_000).map((l) => l.text), s.interim?.text ?? ""].join(" ");
+    return spokenNumbers(text);
+  }
+
+  /** Where the presenter deliberately pointed while saying this (stage coordinates, unmirrored). */
+  private pointedAt(speechStart: number): Point | null {
+    const p = steadyPoint(speechStart - 1000, now());
+    return p ? { x: STAGE_W - p.x, y: p.y } : null;
+  }
+
+  private apply(d: DirectorDecision, ctx: { logId: number; speechEndAt: number; explicit: boolean; cueFrom: number; speechStart: number }) {
     this.updateArc(d);
     const s = store.get();
     const base = { action: d.action, reason: d.reason, beat: d.beat };
@@ -333,7 +354,7 @@ class Director {
           this.apply({ ...d, action: "show", targetIds: [] }, ctx);
           return;
         }
-        const r = prepareVisual(d.visual, s.tables);
+        const r = prepareVisual(d.visual, s.tables, { said: this.saidRecently() });
         if (!r.ok) {
           this.patchLog(ctx.logId, { ...base, outcome: "dropped", errors: r.errors, title: d.visual.title, template: d.visual.template });
           return;
@@ -341,7 +362,10 @@ class Director {
         if (target.status !== "onscreen") recallVisual(target.id);
         updateVisual(target.id, r.visual, r.spec);
         store.set((st) => ({
-          visuals: { ...st.visuals, [target.id]: { ...st.visuals[target.id], revealDeadline: now() + DIRECTOR_REVEAL_GRACE_MS, aliases: r.spec.aliases } },
+          visuals: {
+            ...st.visuals,
+            [target.id]: { ...st.visuals[target.id], revealDeadline: now() + DIRECTOR_REVEAL_GRACE_MS, aliases: r.spec.aliases, growableUntil: now() + GROWABLE_MS },
+          },
         }));
         this.updateReveals();
         requestAnimationFrame(() =>
@@ -356,7 +380,7 @@ class Director {
           this.patchLog(ctx.logId, { ...base, outcome: "dropped", errors: [d.preparedId ? `Unknown prepared visual ${d.preparedId}` : "No visual in the decision"] });
           return;
         }
-        const r = prepareVisual(spec, s.tables);
+        const r = prepareVisual(spec, s.tables, { said: [...(prepared?.said ?? []), ...this.saidRecently()] });
         if (!r.ok) {
           this.patchLog(ctx.logId, { ...base, outcome: "dropped", errors: r.errors, title: spec.title, template: spec.template });
           return;
@@ -384,7 +408,11 @@ class Director {
             tuck,
             cueFrom: ctx.cueFrom,
             revealDeadline: prepared ? null : now() + DIRECTOR_REVEAL_GRACE_MS,
+            anchor: this.pointedAt(ctx.speechStart),
           });
+          if (r.visual.template === "goal") {
+            store.set((x) => ({ visuals: { ...x.visuals, [id]: { ...x.visuals[id], growableUntil: now() + GROWABLE_MS } } }));
+          }
           store.set((x) => ({ director: { ...x.director, lastShowAt: now() } }));
           this.addVisualToBeat(id);
           this.latencyFor.set(id, ctx.logId);
@@ -490,12 +518,32 @@ class Director {
         this.request(`${c.query}`);
         return true;
       }
-      case "hide": {
+      case "hide":
+      case "remove": {
         const onScreen = s.onStage.map((id) => s.visuals[id]).filter(Boolean);
-        const targets = c.query ? [matchVisual(c.query, onScreen)].filter((v): v is VisualInstance => !!v) : onScreen;
-        targets.forEach((v) => tuckVisual(v.id));
-        mark("tuck");
-        this.log({ ...logBase, action: "tuck", outcome: targets.length ? "applied" : "none", reason: "You asked Halo to put it away" });
+        // "that"/"it"/"the chart" mean the visual most recently put on screen.
+        const named = c.query ? matchVisual(c.query, onScreen) : null;
+        const latest = [...onScreen].sort((a, b) => b.shownAt - a.shownAt)[0];
+        const target = named ?? (c.query && onScreen.length > 1 ? null : latest);
+        if (!target) {
+          if (!p.addressed) return false; // "remove friction" with nothing matching on screen is just speech
+          mark("nothing to remove");
+          this.log({ ...logBase, action: "tuck", outcome: "none", reason: "Nothing on screen matched what you asked to remove" });
+          return true;
+        }
+        if (c.kind === "hide") tuckVisual(target.id);
+        else dismissVisual(target.id);
+        mark(c.kind === "hide" ? `tuck ${target.id}` : `remove ${target.id}`);
+        this.log({
+          ...logBase,
+          action: c.kind === "hide" ? "tuck" : "clear",
+          outcome: "applied",
+          reason: c.kind === "hide" ? `You asked to put ${target.title} away` : `You asked to remove ${target.title}`,
+          visualId: target.id,
+          title: target.title,
+          template: target.visual.template,
+          onScreenMs: Math.round(now() - e.at),
+        });
         return true;
       }
       case "expand":

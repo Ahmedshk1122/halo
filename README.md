@@ -2,7 +2,7 @@
 
 Live visuals on your camera feed during video calls. Halo listens as you talk, follows the arc of your talk, and puts supporting visuals on your video: metric cards, charts, strategy cards, roadmaps, rough UI sketches. It's like a slide deck building itself as you speak. Often the right answer is to show nothing, and Halo knows that.
 
-Numbers only ever come from data you load ahead of time. Halo never puts captions or your words on the video.
+Numbers come from you: say a number and Halo can chart it, or load your data so Halo can pull up figures you ask about. Halo never invents a number, and never puts captions or your words on the video.
 
 This is the web prototype. Halo renders a clean stage window in Chrome, OBS captures that window, and OBS Virtual Camera feeds it to Zoom, Teams or Meet.
 
@@ -59,15 +59,20 @@ Click **Listen** in the toolbar. Halo decides on its own when a visual helps. Yo
 | "Halo, show the roadmap" | Recalls it, shows a prepared one, or asks the director to build it now |
 | "Halo, back" | Brings back the most recently tucked visual |
 | "Halo, back to the funnel" / "let's go back to the funnel" | Recalls that visual from its chip |
-| "Halo, hide that" | Tucks what is on screen into chips |
+| "Halo, hide that" / "take that away" | Tucks it into a chip |
+| "get rid of the chart" / "remove that" | Removes it from the stage (history keeps it) |
 | "Halo, clear" | Clears the stage (history is kept) |
 | "Halo, expand" / "collapse" | Grows or shrinks the visual on screen |
 | "Halo, next" | Reveals the next item of a list |
 
 **Hands** (MediaPipe, in the control window):
 
-- Point with your index finger and hold still for about 0.6 s to ring part of a visual in orange.
-- Pinch, hold and move to drag a visual. It stays where you put it.
+- Gestures only count when they're deliberate, so talking with your hands is fine.
+- Hold a pointing finger on a spot while you talk about something, and the visual Halo brings appears there. Pointing alone never creates anything.
+- Point and hold still for about 0.6 s to ring part of a visual in orange.
+- Pinch (or close your hand for a moment) and move to drag a visual. It stays where you put it.
+- Grab a visual and fling it off the screen to get rid of it.
+- On a from → to card, hold your pointing finger on it, then raise your hand: the chart grows with it.
 - A quick pinch-tap expands or collapses it.
 - Your face is a keep-out zone: visuals never cover it, whether placed by Halo or by you.
 

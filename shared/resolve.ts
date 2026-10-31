@@ -4,9 +4,11 @@
 
 import { formatDelta, formatLabel, formatValue, normalizeName, type DataColumn, type DataTable } from "./data";
 import { scanSpec, type GroundingViolation } from "./grounding";
+import { wasSaid, type SpokenNumber } from "./spoken";
 import type {
   Accent,
   ResolvedDelta,
+  SaidUnit,
   MetricSpec,
   ResolvedSeries,
   ResolvedValue,
@@ -54,9 +56,33 @@ function isNumeric(c: DataColumn): boolean {
   return c.kind === "number" || c.kind === "percent" || c.kind === "currency";
 }
 
+export interface ResolveOptions {
+  compact?: boolean;
+  /** Numbers the presenter said recently. Said values must be among them. */
+  said?: SpokenNumber[];
+}
+
+/** Column-like formatting info for a value the presenter said. */
+function saidColumn(value: number, unit: SaidUnit | undefined, currency: string | undefined): Pick<DataColumn, "kind" | "decimals" | "currency"> {
+  const decimals = Math.min(2, (String(value).split(".")[1] ?? "").length);
+  if (unit === "percent") return { kind: "percent", decimals, currency: null };
+  if (unit === "currency") return { kind: "currency", decimals, currency: currency?.trim() || "$" };
+  return { kind: "number", decimals, currency: null };
+}
+
+function resolveSaid(ref: ScalarRef, opts: ResolveOptions): ResolvedValue {
+  const value = Number(ref.said_value);
+  if (!Number.isFinite(value)) throw new RefError("a said value is missing its number");
+  const col = saidColumn(value, ref.said_unit, ref.said_currency);
+  const display = formatValue(value, col, { compact: opts.compact ?? true });
+  if (!wasSaid(value, opts.said ?? [])) throw new RefError(`${display} was not said by the presenter or found in the data`);
+  return { value, display, kind: col.kind, rowLabel: ref.said_label ?? "", table: "said", column: "said" };
+}
+
 /** Resolves a single-cell reference. Returns null when pick is "none". */
-export function resolveScalar(ref: ScalarRef, tables: DataTable[], opts: { compact?: boolean } = {}): ResolvedValue | null {
+export function resolveScalar(ref: ScalarRef, tables: DataTable[], opts: ResolveOptions = {}): ResolvedValue | null {
   if (ref.pick === "none") return null;
+  if (ref.pick === "said") return resolveSaid(ref, opts);
   const table = findTable(tables, ref.table);
   const col = findColumn(table, ref.column);
   if (!isNumeric(col)) throw new RefError(`column "${col.name}" is not numeric`);
@@ -96,8 +122,21 @@ export function resolveScalar(ref: ScalarRef, tables: DataTable[], opts: { compa
 }
 
 /** Resolves a column over rows. Returns null when table is empty (no series). */
-export function resolveSeries(ref: SeriesRef, tables: DataTable[]): ResolvedSeries | null {
+export function resolveSeries(ref: SeriesRef, tables: DataTable[], opts: ResolveOptions = {}): ResolvedSeries | null {
   if (!ref.table) return null;
+  if (ref.table === "said") {
+    const pts = (ref.said_points ?? []).filter((p) => Number.isFinite(Number(p.value)));
+    if (pts.length === 0) throw new RefError("no said values in the series");
+    const points = pts.map((p) => {
+      const value = Number(p.value);
+      const col = saidColumn(value, ref.said_unit, ref.said_currency);
+      const display = formatValue(value, col, { compact: true });
+      if (!wasSaid(value, opts.said ?? [])) throw new RefError(`${display} was not said by the presenter or found in the data`);
+      return { label: tidy(p.label, 24), value, display };
+    });
+    const kind = saidColumn(points[0].value, ref.said_unit, ref.said_currency).kind;
+    return { points, kind, table: "said", xColumn: "label", yColumn: "said" };
+  }
   const table = findTable(tables, ref.table);
   const x = findColumn(table, ref.x);
   const y = findColumn(table, ref.y);
@@ -137,12 +176,14 @@ function tidyList(items: string[], maxItems: number, maxLen: number): string[] {
   return (items ?? []).map((s) => tidy(s, maxLen)).filter(Boolean).slice(0, maxItems);
 }
 
+const tidyRef = (r: ScalarRef): ScalarRef => (r ? { ...r, said_label: tidy(r.said_label ?? "", 32) } : r);
+
 /** Applies copy rules and limits. Returns a cleaned copy of the spec. */
 export function tidySpec(spec: VisualSpec): VisualSpec {
   const base = { title: tidy(spec.title, 44), aliases: (spec.aliases ?? []).map((a) => a.toLowerCase().trim()).filter(Boolean).slice(0, 8) };
   switch (spec.template) {
     case "metric":
-      return { ...spec, ...base, caption: tidy(spec.caption, 60) };
+      return { ...spec, ...base, caption: tidy(spec.caption, 60), value: tidyRef(spec.value), baseline: tidyRef(spec.baseline) };
     case "line":
     case "bar":
       return { ...spec, ...base, subtitle: tidy(spec.subtitle, 60) };
@@ -152,8 +193,8 @@ export function tidySpec(spec: VisualSpec): VisualSpec {
       return {
         ...spec,
         ...base,
-        a: { ...spec.a, label: tidy(spec.a.label, 28), points: tidyList(spec.a.points, 4, 48) },
-        b: { ...spec.b, label: tidy(spec.b.label, 28), points: tidyList(spec.b.points, 4, 48) },
+        a: { ...spec.a, label: tidy(spec.a.label, 28), points: tidyList(spec.a.points, 4, 48), value: tidyRef(spec.a.value) },
+        b: { ...spec.b, label: tidy(spec.b.label, 28), points: tidyList(spec.b.points, 4, 48), value: tidyRef(spec.b.value) },
       };
     case "strategy":
       return {
@@ -185,6 +226,8 @@ export function tidySpec(spec: VisualSpec): VisualSpec {
       };
     case "statement":
       return { ...spec, ...base, kicker: tidy(spec.kicker, 28), text: tidy(spec.text, 90) };
+    case "goal":
+      return { ...spec, ...base, from: tidyRef(spec.from), to: tidyRef(spec.to), from_label: tidy(spec.from_label, 24), to_label: tidy(spec.to_label, 24) };
   }
 }
 
@@ -210,6 +253,9 @@ function checkShape(spec: VisualSpec): string[] {
     case "comparison":
       if (!spec.a.label || !spec.b.label) errors.push("comparison needs two labels");
       break;
+    case "goal":
+      if (spec.from?.pick === "none" || spec.to?.pick === "none") errors.push("goal needs a from value and a to value");
+      break;
     default:
       break;
   }
@@ -228,8 +274,8 @@ function labelIndex(series: ResolvedSeries, label: string): number {
   return series.points.findIndex((p) => normalizeName(p.label) === n);
 }
 
-/** The whole pipeline: tidy → shape → resolve data → scan text. */
-export function prepareVisual(input: VisualSpec, tables: DataTable[]): PrepareResult {
+/** The whole pipeline: tidy → shape → scan text → resolve data. `said`: numbers the presenter said. */
+export function prepareVisual(input: VisualSpec, tables: DataTable[], opts: { said?: SpokenNumber[] } = {}): PrepareResult {
   if (!input || typeof input !== "object" || !("template" in input)) {
     return { ok: false, stage: "schema", errors: ["not a visual spec"], violations: [] };
   }
@@ -242,7 +288,7 @@ export function prepareVisual(input: VisualSpec, tables: DataTable[]): PrepareRe
   const shapeErrors = checkShape(spec);
   if (shapeErrors.length) return { ok: false, stage: "schema", errors: shapeErrors, violations: [] };
 
-  const violations = scanSpec(spec);
+  const violations = scanSpec(spec, opts.said ?? []);
   if (violations.length) {
     return {
       ok: false,
@@ -253,7 +299,7 @@ export function prepareVisual(input: VisualSpec, tables: DataTable[]): PrepareRe
   }
 
   try {
-    const visual = resolve(spec, tables);
+    const visual = resolve(spec, tables, opts.said ?? []);
     return { ok: true, visual, spec };
   } catch (e) {
     if (e instanceof RefError) return { ok: false, stage: "data", errors: [e.message], violations: [] };
@@ -261,20 +307,26 @@ export function prepareVisual(input: VisualSpec, tables: DataTable[]): PrepareRe
   }
 }
 
-function resolve(spec: VisualSpec, tables: DataTable[]): ResolvedVisual {
+/** Formatting info for a resolved value: its data column, or the unit it was said in. */
+function columnOf(v: ResolvedValue, tables: DataTable[]): Pick<DataColumn, "kind" | "decimals" | "currency"> {
+  if (v.table === "said") return { kind: v.kind, decimals: 1, currency: v.display.match(/^[^\d−-]+/)?.[0] ?? null };
+  return findColumn(findTable(tables, v.table), v.column);
+}
+
+function resolve(spec: VisualSpec, tables: DataTable[], said: SpokenNumber[]): ResolvedVisual {
+  const opts: ResolveOptions = { compact: true, said };
   switch (spec.template) {
     case "metric": {
-      const value = resolveScalar(spec.value, tables, { compact: true });
+      const value = resolveScalar(spec.value, tables, opts);
       if (!value) throw new RefError("metric needs a value");
-      const baseline = resolveScalar(spec.baseline, tables, { compact: true });
-      const trend = resolveSeries(spec.trend, tables);
+      const baseline = resolveScalar(spec.baseline, tables, opts);
+      const trend = resolveSeries(spec.trend, tables, opts);
       let delta: ResolvedDelta | null = null;
       if (baseline) {
         if (baseline.table !== value.table || baseline.column !== value.column) {
           throw new RefError("baseline must come from the same column as the value");
         }
-        const table = findTable(tables, value.table);
-        const col = findColumn(table, value.column);
+        const col = columnOf(value, tables);
         const diff = value.value - baseline.value;
         const direction = Math.abs(diff) < 1e-9 ? "flat" : diff > 0 ? "up" : "down";
         delta = { display: formatDelta(diff, col, baseline.value), direction, since: baseline.rowLabel };
@@ -290,12 +342,12 @@ function resolve(spec: VisualSpec, tables: DataTable[]): ResolvedVisual {
       };
     }
     case "line": {
-      const series = resolveSeries(spec.series, tables);
+      const series = resolveSeries(spec.series, tables, opts);
       if (!series || series.points.length < 2) throw new RefError("line chart needs at least two points");
       return { template: "line", title: spec.title, subtitle: spec.subtitle, series, accent: "blue" };
     }
     case "bar": {
-      const series = resolveSeries(spec.series, tables);
+      const series = resolveSeries(spec.series, tables, opts);
       if (!series) throw new RefError("bar chart needs a series");
       return {
         template: "bar",
@@ -307,10 +359,9 @@ function resolve(spec: VisualSpec, tables: DataTable[]): ResolvedVisual {
       };
     }
     case "funnel": {
-      const steps = resolveSeries(spec.steps, tables);
+      const steps = resolveSeries(spec.steps, tables, opts);
       if (!steps || steps.points.length < 2) throw new RefError("funnel needs at least two steps");
-      const table = findTable(tables, steps.table);
-      const col = findColumn(table, steps.yColumn);
+      const col = steps.table === "said" ? { kind: steps.kind, decimals: 1, currency: null } : findColumn(findTable(tables, steps.table), steps.yColumn);
       const drops = steps.points.map((p, i) => {
         if (i === 0) return null;
         const prev = steps.points[i - 1].value;
@@ -327,7 +378,7 @@ function resolve(spec: VisualSpec, tables: DataTable[]): ResolvedVisual {
       };
     }
     case "comparison": {
-      const side = (s: typeof spec.a) => ({ label: s.label, value: resolveScalar(s.value, tables, { compact: true }), points: s.points });
+      const side = (s: typeof spec.a) => ({ label: s.label, value: resolveScalar(s.value, tables, opts), points: s.points });
       return { template: "comparison", title: spec.title, a: side(spec.a), b: side(spec.b), favor: spec.favor, accent: "blue" };
     }
     case "strategy":
@@ -349,5 +400,23 @@ function resolve(spec: VisualSpec, tables: DataTable[]): ResolvedVisual {
       };
     case "statement":
       return { template: "statement", title: spec.title, kicker: spec.kicker, text: spec.text, accent: "blue" };
+    case "goal": {
+      const from = resolveScalar(spec.from, tables, opts);
+      const to = resolveScalar(spec.to, tables, opts);
+      if (!from || !to) throw new RefError("goal needs a from value and a to value");
+      const diff = to.value - from.value;
+      const direction = Math.abs(diff) < 1e-9 ? "flat" : diff > 0 ? "up" : "down";
+      const good = spec.good_direction === "down" ? "down" : "up";
+      return {
+        template: "goal",
+        title: spec.title,
+        from,
+        to,
+        fromLabel: spec.from_label || from.rowLabel,
+        toLabel: spec.to_label || to.rowLabel,
+        change: { display: formatDelta(diff, columnOf(from, tables), from.value), direction, since: "" },
+        accent: direction === "flat" ? "blue" : direction === good ? "green" : "red",
+      };
+    }
   }
 }

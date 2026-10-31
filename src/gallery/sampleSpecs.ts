@@ -4,7 +4,7 @@ import type { VisualSpec } from "../../shared/visuals";
 
 const none = { match_column: "", match_value: "" };
 
-export const SAMPLE_SPECS: { name: string; spec: VisualSpec; reveal?: number }[] = [
+export const SAMPLE_SPECS: { name: string; spec: VisualSpec; reveal?: number; said?: string }[] = [
   {
     name: "Metric card",
     spec: {
@@ -119,6 +119,20 @@ export const SAMPLE_SPECS: { name: string; spec: VisualSpec; reveal?: number }[]
         { kind: "grid", label: "Popular", items: ["Product roadmap", "Sprint planning", "Team wiki", "Launch plan"], highlight: true },
         { kind: "button", label: "Start from scratch", items: [], highlight: false },
       ],
+    },
+  },
+  {
+    name: "From → to",
+    said: "We're at $100,000 in revenue today, and we want to be at $200,000 next year.",
+    spec: {
+      template: "goal",
+      title: "Revenue",
+      aliases: ["revenue", "target"],
+      from: { table: "", column: "", pick: "said", ...none, said_value: 100000, said_unit: "currency", said_currency: "$", said_label: "Revenue today" },
+      to: { table: "", column: "", pick: "said", ...none, said_value: 200000, said_unit: "currency", said_currency: "$", said_label: "Revenue target" },
+      from_label: "Today",
+      to_label: "Next year",
+      good_direction: "up",
     },
   },
   {

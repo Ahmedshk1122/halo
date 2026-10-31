@@ -14,6 +14,7 @@ export const TEMPLATE_IDS = [
   "process",
   "ui_sketch",
   "statement",
+  "goal",
 ] as const;
 export type TemplateId = (typeof TEMPLATE_IDS)[number];
 
@@ -28,6 +29,7 @@ export const TEMPLATE_LABELS: Record<TemplateId, string> = {
   process: "Process flow",
   ui_sketch: "UI sketch",
   statement: "Statement",
+  goal: "From → to",
 };
 
 /** Lucide icons the director may pick from. Kept short so the model chooses well. */
@@ -69,28 +71,46 @@ export type IconName = (typeof ICON_NAMES)[number];
 // Data references
 // ---------------------------------------------------------------------------
 
-export type RowPick = "first" | "last" | "max" | "min" | "match" | "none";
+export type RowPick = "first" | "last" | "max" | "min" | "match" | "none" | "said";
+export type SaidUnit = "number" | "percent" | "currency";
 
-/** One cell: a table, a column, and which row. */
+/**
+ * One value: a cell from a loaded table, or (pick "said") a number the presenter
+ * said out loud. Said values are checked against the transcript before use.
+ */
 export interface ScalarRef {
   table: string;
   column: string;
-  /** "none" means the reference is intentionally empty. */
+  /** "none" means the reference is intentionally empty. "said" uses said_value. */
   pick: RowPick;
   /** Used when pick is "match": the row where match_column equals match_value. */
   match_column: string;
   match_value: string;
+  said_value?: number;
+  said_unit?: SaidUnit;
+  /** "$", "€", "£", "₹", "Rs" or empty. */
+  said_currency?: string;
+  /** What the said value is ("Revenue today"). */
+  said_label?: string;
 }
 
-/** A column over rows, in file order: x labels and y values. */
+export interface SaidPoint {
+  label: string;
+  value: number;
+}
+
+/** A column over rows, in file order: x labels and y values. Table "said" uses said_points. */
 export interface SeriesRef {
-  /** Empty string means no series. */
+  /** Empty string means no series. "said" means values the presenter said. */
   table: string;
   x: string;
   y: string;
   /** Optional row filter. Empty strings mean no filter. */
   filter_column: string;
   filter_value: string;
+  said_points?: SaidPoint[];
+  said_unit?: SaidUnit;
+  said_currency?: string;
 }
 
 export type RevealMode = "progressive" | "all";
@@ -225,6 +245,16 @@ export interface StatementSpec extends SpecBase {
   text: string;
 }
 
+/** Where things are and where they're going: "we're at X today, we want Y". */
+export interface GoalSpec extends SpecBase {
+  template: "goal";
+  from: ScalarRef;
+  to: ScalarRef;
+  from_label: string;
+  to_label: string;
+  good_direction: "up" | "down";
+}
+
 export type VisualSpec =
   | MetricSpec
   | LineSpec
@@ -235,7 +265,8 @@ export type VisualSpec =
   | RoadmapSpec
   | ProcessSpec
   | UISketchSpec
-  | StatementSpec;
+  | StatementSpec
+  | GoalSpec;
 
 // ---------------------------------------------------------------------------
 // Resolved visuals (what templates render)
@@ -371,6 +402,17 @@ export interface RStatement {
   accent: Accent;
 }
 
+export interface RGoal {
+  template: "goal";
+  title: string;
+  from: ResolvedValue;
+  to: ResolvedValue;
+  fromLabel: string;
+  toLabel: string;
+  change: ResolvedDelta;
+  accent: Accent;
+}
+
 export type ResolvedVisual =
   | RMetric
   | RLine
@@ -381,7 +423,8 @@ export type ResolvedVisual =
   | RRoadmap
   | RProcess
   | RUISketch
-  | RStatement;
+  | RStatement
+  | RGoal;
 
 /** Number of items a template reveals progressively (0 if it doesn't). */
 export function revealCount(v: ResolvedVisual): number {

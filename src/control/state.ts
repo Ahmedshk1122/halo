@@ -6,6 +6,7 @@ import type { DirectorAction, Proactivity } from "../../shared/director";
 import type { Rect } from "../../shared/geometry";
 import type { Slot } from "../../shared/layout";
 import type { GlassTheme } from "../../shared/stage";
+import type { SpokenNumber } from "../../shared/spoken";
 import type { ResolvedVisual, TemplateId, VisualSpec } from "../../shared/visuals";
 import { createStore } from "./createStore";
 
@@ -38,6 +39,8 @@ export interface VisualInstance {
   revealDeadline: number | null;
   /** Words spoken when the last item was revealed (prepared visuals fall back to pacing). */
   wordsAtReveal: number;
+  /** Goal cards can be grown by a raised pointing hand until this time. */
+  growableUntil?: number;
 }
 
 export interface TranscriptEntry {
@@ -92,6 +95,8 @@ export interface PreparedVisual {
   spec: VisualSpec;
   visual: ResolvedVisual | null;
   errors: string[];
+  /** Numbers written in the notes, which count as the presenter's own words. */
+  said?: SpokenNumber[];
 }
 
 export type SpeechStatus = "idle" | "starting" | "listening" | "restarting" | "error" | "unsupported";

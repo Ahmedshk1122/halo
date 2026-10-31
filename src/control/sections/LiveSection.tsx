@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { prepareVisual } from "../../../shared/resolve";
+import { spokenNumbers } from "../../../shared/spoken";
 import { revealCount, type RStatement } from "../../../shared/visuals";
 import { SAMPLE_SPECS } from "../../gallery/sampleSpecs";
 import { useStore } from "../createStore";
@@ -24,8 +25,8 @@ export function LiveSection() {
   const [notice, setNotice] = useState<{ tone: "good" | "bad"; text: string } | null>(null);
 
   const showSample = () => {
-    const { spec } = SAMPLE_SPECS[sample];
-    const result = prepareVisual(spec, store.get().tables);
+    const { spec, said } = SAMPLE_SPECS[sample];
+    const result = prepareVisual(spec, store.get().tables, { said: spokenNumbers(said ?? "") });
     if (!result.ok) {
       setNotice({ tone: "bad", text: `Dropped (${result.stage}): ${result.errors.join("; ")}` });
       return;

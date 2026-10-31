@@ -540,3 +540,68 @@
   font-size: var(--type-min);
   color: var(--label-2);
 }
+
+/* From → to (goal). The chart fills the card height so it grows with the hand. */
+.tpl-goal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+.tpl-goal-change {
+  flex: none;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: var(--type-body);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent-text);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+.tpl-goal-chart {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 28px;
+}
+.tpl-goal-col {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  min-height: 0;
+  border-radius: 18px;
+}
+.tpl-goal-value {
+  position: absolute;
+  left: 0;
+  right: 0;
+  padding-bottom: 10px;
+  font-size: var(--type-display);
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+}
+.tpl-goal-track {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+.tpl-goal-bar {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  border-radius: 18px 18px 6px 6px;
+  background: var(--fill);
+}
+.tpl-goal-col.is-target .tpl-goal-bar {
+  background: var(--accent);
+}
+.tpl-goal-col.is-target .tpl-goal-value {
+  color: var(--accent-text);
+}
+.tpl-goal-label {
+  margin-top: 12px;
+}

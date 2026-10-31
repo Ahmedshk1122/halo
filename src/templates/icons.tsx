@@ -39,6 +39,7 @@ import {
   Workflow,
   AppWindow,
   Quote,
+  Goal,
 } from "lucide-react";
 import type { IconName, TemplateId } from "../../shared/visuals";
 
@@ -89,6 +90,7 @@ const TEMPLATE_ICONS: Record<TemplateId, LucideIcon> = {
   process: Workflow,
   ui_sketch: AppWindow,
   statement: Quote,
+  goal: Goal,
 };
 
 export function Icon({ name, size, className }: { name: IconName; size: number; className?: string }) {

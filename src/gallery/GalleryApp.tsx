@@ -5,6 +5,7 @@ import { placeVisual } from "../../shared/placement";
 import { prepareVisual } from "../../shared/resolve";
 import type { GlassTheme, StageChip, StageState } from "../../shared/stage";
 import { revealCount, TEMPLATE_LABELS } from "../../shared/visuals";
+import { spokenNumbers } from "../../shared/spoken";
 import { sampleTables } from "../data/samples";
 import { CameraVideo } from "../stage/CameraVideo";
 import { StageCanvas } from "../stage/StageCanvas";
@@ -36,7 +37,7 @@ export function GalleryApp() {
   const items = useMemo(
     () =>
       SAMPLE_SPECS.map((s) => {
-        const result = prepareVisual(s.spec, tables);
+        const result = prepareVisual(s.spec, tables, { said: spokenNumbers(s.said ?? "") });
         return { ...s, result };
       }),
     [tables],

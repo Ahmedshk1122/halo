@@ -12,6 +12,8 @@ describe("parseCommand", () => {
     expect(cmd("Hey Halo, show the roadmap")).toEqual({ kind: "show", query: "roadmap" });
     expect(cmd("Hello, show me the funnel again")).toEqual({ kind: "recall", query: "funnel" });
     expect(cmd("Halo, hide that")).toEqual({ kind: "hide", query: "" });
+    expect(cmd("Halo, remove that chart")).toEqual({ kind: "remove", query: "" });
+    expect(cmd("Halo, get rid of the funnel")).toEqual({ kind: "remove", query: "funnel" });
     expect(cmd("Halo next")).toEqual({ kind: "next" });
   });
 
@@ -20,7 +22,16 @@ describe("parseCommand", () => {
     expect(parseCommand("Going back to the funnel")?.addressed).toBe(false);
   });
 
+  it("understands natural removal, without the wake word", () => {
+    expect(cmd("Okay, take that away.")).toEqual({ kind: "hide", query: "" });
+    expect(cmd("Let's get rid of the chart.")).toEqual({ kind: "remove", query: "" });
+    expect(cmd("Remove the funnel please")).toEqual({ kind: "remove", query: "funnel" });
+    expect(cmd("Can you clear the screen?")).toEqual({ kind: "clear" });
+  });
+
   it("ignores ordinary speech", () => {
+    expect(cmd("We need to remove friction from onboarding.")).toBeNull();
+    expect(cmd("We will remove it from the flow in January.")).toBeNull();
     expect(cmd("Hello everyone, thanks for joining.")).toBeNull();
     expect(cmd("Activation went from 31 to 44%.")).toBeNull();
     expect(cmd("Show of hands, who has tried it?")).toBeNull();

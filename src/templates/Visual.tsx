@@ -2,6 +2,7 @@ import type { ResolvedVisual } from "../../shared/visuals";
 import { BarChart } from "./BarChart";
 import { Comparison } from "./Comparison";
 import { Funnel } from "./Funnel";
+import { GoalCard } from "./GoalCard";
 import { LineChart } from "./LineChart";
 import { MetricCard } from "./MetricCard";
 import { StatementCard } from "./StatementCard";
@@ -39,5 +40,7 @@ export function VisualContent({ v, ctx }: { v: ResolvedVisual; ctx: TemplateCont
       return <UISketch v={v} />;
     case "statement":
       return <StatementCard v={v} />;
+    case "goal":
+      return <GoalCard v={v} />;
   }
 }

@@ -1,8 +1,10 @@
 // Hand gestures from MediaPipe landmarks. Pure and frame-driven so it can be
-// tested with synthetic hands.
-//   point (index out) + dwell ~600ms  → target the part under the fingertip
-//   pinch, hold and move               → drag
-//   quick pinch-tap                    → expand / collapse
+// tested with synthetic hands. Every gesture must be deliberate, so a presenter
+// who talks with their hands doesn't trigger anything by accident.
+//   point (index out) + dwell ~600ms     → target the part under the fingertip
+//   pinch (or a fist held a moment), move → drag
+//   grab and fling                        → throw the visual away
+//   quick pinch-tap                       → expand / collapse
 
 import { STAGE_H, STAGE_W, expandRect, type Point, type Rect } from "./geometry";
 
@@ -29,6 +31,8 @@ const dist = (a: Landmark, b: Landmark) => Math.hypot(a.x - b.x, a.y - b.y);
 
 export interface HandPose {
   pointing: boolean;
+  /** All four fingers curled. */
+  fist: boolean;
   /** Thumb–index distance relative to hand size (small = pinching). */
   pinchRatio: number;
   indexTip: Landmark;
@@ -48,6 +52,7 @@ export function classifyHand(lm: Landmark[]): HandPose {
   const pinky = extended(lm, PINKY_TIP, PINKY_PIP);
   return {
     pointing: index && !middle && !ring && !pinky,
+    fist: !index && !middle && !ring && !pinky,
     pinchRatio,
     indexTip: lm[INDEX_TIP],
     pinchPoint: { x: (lm[THUMB_TIP].x + lm[INDEX_TIP].x) / 2, y: (lm[THUMB_TIP].y + lm[INDEX_TIP].y) / 2 },
@@ -100,6 +105,7 @@ export type GestureEvent =
   | { type: "drag-move"; at: Point; from: Point }
   | { type: "drag-end"; at: Point }
   | { type: "tap"; at: Point }
+  | { type: "throw"; at: Point; velocity: Point }
   | { type: "lost" };
 
 export const GESTURE = {
@@ -112,6 +118,12 @@ export const GESTURE = {
   dragMove: 28,
   tapMaxMs: 260,
   smoothing: 0.55,
+  /** A fist only grabs after being held this long, so fists made while talking do nothing. */
+  fistHoldMs: 250,
+  /** A grab released (or lost) moving faster than this, over at least throwMinDistance, is a throw. */
+  throwSpeed: 1400,
+  throwMinDistance: 80,
+  throwWindowMs: 150,
 };
 
 export class GestureMachine {
@@ -120,6 +132,9 @@ export class GestureMachine {
   private dwellAnchor: Point | null = null;
   private dwellFired = false;
   private pinching = false;
+  private grabKind: "pinch" | "fist" | null = null;
+  private fistSince: number | null = null;
+  private recent: { t: number; x: number; y: number }[] = [];
   private pinchStart = 0;
   private pinchOrigin: Point | null = null;
   private dragging = false;
@@ -128,15 +143,30 @@ export class GestureMachine {
   update(f: HandFrame): GestureEvent[] {
     const out: GestureEvent[] = [];
     if (!f.present || !f.pose || !f.tip || !f.pinch) {
-      if (this.dragging && this.lastDrag) out.push({ type: "drag-end", at: this.lastDrag });
+      // A hand flung out of frame mid-drag is a throw.
+      const throwV = this.dragging ? this.throwVelocity(f.t) : null;
+      if (this.dragging && this.lastDrag) out.push(throwV ? { type: "throw", at: this.lastDrag, velocity: throwV } : { type: "drag-end", at: this.lastDrag });
       if (this.smooth) out.push({ type: "lost" });
       this.reset();
       return out;
     }
 
     const wasPinching = this.pinching;
-    this.pinching = wasPinching ? f.pose.pinchRatio < GESTURE.pinchOff : f.pose.pinchRatio < GESTURE.pinchOn;
+    // Grab: a pinch starts at once; a fist must be held a moment first.
+    if (f.pose.fist) this.fistSince ??= f.t;
+    else this.fistSince = null;
+    const fistHeld = this.fistSince !== null && f.t - this.fistSince >= GESTURE.fistHoldMs;
+    if (wasPinching) {
+      this.pinching = this.grabKind === "fist" ? f.pose.fist || f.pose.pinchRatio < GESTURE.pinchOff : f.pose.pinchRatio < GESTURE.pinchOff;
+    } else {
+      this.pinching = f.pose.pinchRatio < GESTURE.pinchOn || fistHeld;
+      if (this.pinching) this.grabKind = f.pose.pinchRatio < GESTURE.pinchOn ? "pinch" : "fist";
+    }
     const raw = this.pinching ? f.pinch : f.tip;
+    if (this.pinching) {
+      this.recent.push({ t: f.t, x: raw.x, y: raw.y });
+      while (this.recent.length && f.t - this.recent[0].t > GESTURE.throwWindowMs) this.recent.shift();
+    }
     const a = GESTURE.smoothing;
     this.smooth = this.smooth ? { x: this.smooth.x * (1 - a) + raw.x * a, y: this.smooth.y * (1 - a) + raw.y * a } : { ...raw };
     const at = this.smooth;
@@ -163,14 +193,19 @@ export class GestureMachine {
     }
     if (!this.pinching && wasPinching) {
       const held = f.t - this.pinchStart;
-      if (this.dragging) {
+      const throwV = this.dragging ? this.throwVelocity(f.t) : null;
+      if (this.dragging && throwV) {
+        out.push({ type: "throw", at: { ...(this.lastDrag ?? at) }, velocity: throwV });
+      } else if (this.dragging) {
         out.push({ type: "drag-end", at: { ...(this.lastDrag ?? at) } });
-      } else if (held <= GESTURE.tapMaxMs && this.pinchOrigin) {
+      } else if (this.grabKind === "pinch" && held <= GESTURE.tapMaxMs && this.pinchOrigin) {
         out.push({ type: "tap", at: { ...this.pinchOrigin } });
       }
       this.dragging = false;
       this.lastDrag = null;
       this.pinchOrigin = null;
+      this.grabKind = null;
+      this.recent = [];
     }
 
     // Point and dwell.
@@ -194,8 +229,22 @@ export class GestureMachine {
     return out;
   }
 
+  /** Velocity (px/s) of the grab over the last moments, if fast and far enough to be a throw. */
+  private throwVelocity(t: number): Point | null {
+    const pts = this.recent.filter((p) => t - p.t <= GESTURE.throwWindowMs + 40);
+    if (pts.length < 2) return null;
+    const a = pts[0];
+    const b = pts[pts.length - 1];
+    const dt = Math.max(1, b.t - a.t) / 1000;
+    const dist = Math.hypot(b.x - a.x, b.y - a.y);
+    return dist / dt >= GESTURE.throwSpeed && dist >= GESTURE.throwMinDistance ? { x: (b.x - a.x) / dt, y: (b.y - a.y) / dt } : null;
+  }
+
   private reset() {
     this.smooth = null;
+    this.recent = [];
+    this.grabKind = null;
+    this.fistSince = null;
     this.dwellAnchor = null;
     this.dwellFired = false;
     this.pinching = false;

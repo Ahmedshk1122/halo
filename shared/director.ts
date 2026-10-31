@@ -50,6 +50,8 @@ export interface DirectorRequest {
   proactivity: Proactivity;
   /** The presenter explicitly asked Halo for something ("Halo, show the roadmap"). */
   request: string | null;
+  /** The presenter held a pointing finger on a spot while speaking. */
+  pointing?: boolean;
 }
 
 export interface DirectorDecision {
@@ -102,14 +104,25 @@ export function obj(properties: Record<string, JsonSchema>, description?: string
   };
 }
 
+const num = (description: string): JsonSchema => ({ type: "number", description });
+const saidUnit = enm(["number", "percent", "currency"], "Unit of the said value(s).");
+const saidCurrency = str('Currency symbol for said currency values: "$", "€", "£", "₹" or "Rs". Empty otherwise.');
+
 const scalarRef = (description: string) =>
   obj(
     {
-      table: str("Table name exactly as in the catalog. Empty when pick is none."),
-      column: str("Numeric column name exactly as in the catalog. Empty when pick is none."),
-      pick: enm(["first", "last", "max", "min", "match", "none"], "Which row: last = latest, first = starting value, match = the row whose match_column equals match_value, none = unused."),
+      table: str("Table name exactly as in the catalog. Empty when pick is none or said."),
+      column: str("Numeric column name exactly as in the catalog. Empty when pick is none or said."),
+      pick: enm(
+        ["first", "last", "max", "min", "match", "said", "none"],
+        "Which value: last = latest row, first = starting row, match = the row whose match_column equals match_value, said = a number the presenter said (said_value), none = unused.",
+      ),
       match_column: str("Column to match on (usually the label column) when pick is match, else empty."),
       match_value: str("Row label to match, as written in the catalog, when pick is match, else empty."),
+      said_value: num("When pick is said: the number exactly as the presenter said it, as a plain number ($200K = 200000, 44% = 44). Else 0."),
+      said_unit: saidUnit,
+      said_currency: saidCurrency,
+      said_label: str("When pick is said: what the value is, in two to four words, e.g. Revenue today. Else empty."),
     },
     description,
   );
@@ -122,6 +135,12 @@ const seriesRef = (description: string) =>
       y: str("Numeric column with the values."),
       filter_column: str("Optional column to filter rows by, else empty."),
       filter_value: str("Value the filter column must equal, else empty."),
+      said_points: arr(
+        obj({ label: str("Short label, e.g. Today or Q1."), value: num("The number exactly as the presenter said it, as a plain number.") }),
+        'When table is "said": the points the presenter said, in order. Else empty.',
+      ),
+      said_unit: saidUnit,
+      said_currency: saidCurrency,
     },
     description,
   );
@@ -190,6 +209,13 @@ const TEMPLATE_PROPS: Record<TemplateId, Record<string, JsonSchema>> = {
       "One to four blocks, top to bottom.",
     ),
   },
+  goal: {
+    from: scalarRef("Where things are now (often pick said)."),
+    to: scalarRef("Where they want to be (often pick said)."),
+    from_label: str("Label under the first value, e.g. Today."),
+    to_label: str("Label under the second value, e.g. Next year."),
+    good_direction: enm(["up", "down"], "Which direction is good (costs: down)."),
+  },
   statement: {
     kicker: str("One to three words above the line, e.g. The ask."),
     text: str("One short line, at most twelve words, words only."),
@@ -207,6 +233,7 @@ const TOOL_DESCRIPTIONS: Record<TemplateId, string> = {
   process: "Show a sequence of steps as a flow.",
   ui_sketch: "Show a rough wireframe of an app screen when the presenter asks the audience to picture a screen.",
   statement: "Show one short line, for a closing ask or key takeaway.",
+  goal: "Show where something is and where it should go: two values side by side with the change, e.g. revenue today versus the target.",
 };
 
 export const TOOL_FOR_TEMPLATE: Record<TemplateId, string> = {
@@ -220,6 +247,7 @@ export const TOOL_FOR_TEMPLATE: Record<TemplateId, string> = {
   process: "show_process",
   ui_sketch: "show_ui_sketch",
   statement: "show_statement",
+  goal: "show_goal",
 };
 
 export const TEMPLATE_FOR_TOOL: Record<string, TemplateId> = Object.fromEntries(

@@ -44,6 +44,8 @@ const frames = (from: number, to: number, lm: Landmark[] | null, at?: (t: number
     return { t, lm, at: at?.(t) };
   });
 
+const open = () => hand({ index: true, middle: true, ring: true, pinky: true });
+
 describe("GestureMachine", () => {
   it("targets after pointing still for about 600ms, once", () => {
     const ev = run(frames(0, 1200, hand({ index: true })));
@@ -57,21 +59,43 @@ describe("GestureMachine", () => {
   });
 
   it("turns a quick pinch into a tap", () => {
-    const ev = run([...frames(0, 100, hand()), ...frames(133, 300, hand({ pinch: true })), ...frames(333, 500, hand())]);
+    const ev = run([...frames(0, 100, open()), ...frames(133, 300, hand({ pinch: true })), ...frames(333, 500, open())]);
     expect(ev.map((e) => e.type)).toEqual(["tap"]);
   });
 
   it("turns pinch, hold and move into a drag", () => {
     const ev = run([
-      ...frames(0, 100, hand()),
-      ...frames(133, 900, hand({ pinch: true }), (t) => ({ x: 500 + Math.max(0, t - 400), y: 400 })),
-      ...frames(933, 1000, hand()),
+      ...frames(0, 100, open()),
+      ...frames(133, 900, hand({ pinch: true }), (t) => ({ x: 500 + Math.max(0, t - 400) * 0.5, y: 400 })),
+      ...frames(933, 1000, open()),
     ]);
     const types = ev.map((e) => e.type);
     expect(types[0]).toBe("drag-start");
     expect(types).toContain("drag-move");
     expect(types.at(-1)).toBe("drag-end");
     expect(types).not.toContain("tap");
+  });
+
+  it("throws a grabbed visual flung away fast", () => {
+    const ev = run([
+      ...frames(0, 100, open()),
+      ...frames(133, 500, hand({ pinch: true }), () => ({ x: 500, y: 400 })),
+      ...frames(533, 700, hand({ pinch: true }), (t) => ({ x: 500 + (t - 533) * 4, y: 400 })),
+      ...frames(733, 800, open(), () => ({ x: 1200, y: 400 })),
+    ]);
+    const types = ev.map((e) => e.type);
+    expect(types).toContain("throw");
+    expect(types).not.toContain("drag-end");
+    const t = ev.find((e) => e.type === "throw");
+    expect(t?.type === "throw" && t.velocity.x).toBeGreaterThan(1400);
+  });
+
+  it("grabs with a fist only after it is held, so talking hands do nothing", () => {
+    const quick = run([...frames(0, 100, open()), ...frames(133, 300, hand()), ...frames(333, 500, open())]);
+    expect(quick).toEqual([]);
+    const held = run([...frames(0, 100, open()), ...frames(133, 900, hand(), (t) => ({ x: 500 + Math.max(0, t - 500) * 0.3, y: 400 })), ...frames(933, 1000, open())]);
+    expect(held.map((e) => e.type)).toContain("drag-start");
+    expect(held.map((e) => e.type)).not.toContain("tap");
   });
 
   it("ends a drag when the hand leaves", () => {

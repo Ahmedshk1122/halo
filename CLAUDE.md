@@ -6,13 +6,14 @@ This repo is the web prototype: a Vite + React + TypeScript app plus a tiny loca
 
 ## Product rules (never break these)
 
-- **Proactive by default.** The director decides when to show something. Voice commands ("Halo, show X", "Halo, back", "let's go back to the funnel", "Halo, clear") are the secondary way to steer.
+- **The presenter leads; Halo assists.** Halo helps them land their points and never gets in their way. When they ask for something, do it; never refuse because it isn't in their data.
+- **Proactive by default, with judgment.** The director decides when to show something, and when not to, like an assistant who knows the talk. Voice commands ("Halo, show X", "Halo, back", "let's go back to the funnel", "take that away", "Halo, clear") are the secondary way to steer.
 - **No captions, ever.** Never put a transcript, captions or the presenter's spoken words on the video. The transcript is visible only in the control window.
-- **Numbers come only from loaded data.** Metrics and numbers come only from CSV/XLSX files the presenter loads ahead of time. Everything else is generated live from what they say.
-  - Templates that show numbers take data references (table, column, row or filter), never typed numbers. The app resolves references and renders the real values.
-  - If any reference fails to resolve, drop the visual and log it.
-  - Scan every generated text field before rendering. Month, quarter and year names and small item counts ("three steps") are fine. Any other number, percentage or currency that did not come from data rejects the visual.
-  - If the presenter says a number that is not in their data, it does not go on screen.
+- **Numbers come from the presenter, never from the AI.** A number reaches the screen because the presenter said it (or wrote it in their talk notes), or because it's in data they loaded (CSV/XLSX). Loaded data is there to pull up figures they ask about or mention.
+  - Templates that show numbers take references, never typed numbers: a data reference (table, column, row or filter) or a said value (`pick: "said"` / table `"said"`), which is checked against what the presenter actually said (`shared/spoken.ts`).
+  - If any reference fails to resolve or a said value wasn't said, drop the visual and log it.
+  - Scan every generated text field before rendering. Month, quarter and year names, small item counts ("three steps") and numbers the presenter said are fine. Any other number, percentage or currency rejects the visual.
+  - The AI never invents, estimates or computes a number; Halo computes changes and percentages itself.
 - **Restraint.** Show a visual for a number, comparison, sequence, structure, plan or "picture this" moment that would be hard to hold in memory. Show nothing for greetings, small talk, anecdotes, stories, emotional moments, or anything already clear.
 - **At most two visuals on screen.** At least ~6 seconds between new visuals unless the presenter asks. Tuck visuals away when the beat moves on. Tucked visuals become chips along the top edge so they can be recalled.
 - **The face is a keep-out zone.** Visuals never cover it, whether placed automatically or by hand.
@@ -55,7 +56,10 @@ Every visual on the video should feel like Apple Keynote or visionOS made it: ca
 ## Hands and placement
 
 - MediaPipe Tasks Vision in the browser for hand landmarks and face detection.
-- Point (index finger out) and dwell ~600ms on part of a visual to target it (orange ring). Pinch, hold and move to drag; it stays where it is put. Quick pinch-tap expands or collapses.
+- **Gestures must be deliberate.** Presenters talk with their hands; nothing may trigger from a passing or waving hand.
+- Pointing never creates a visual. Speech decides whether to show something; if the presenter held a pointing finger still on a spot (~450ms) while saying it, the visual is placed there.
+- Point and dwell ~600ms on part of a visual to target it (orange ring). Pinch (or a fist held ~250ms) and move to drag; it stays where it is put. Grab and fling to throw a visual away. Quick pinch-tap expands or collapses.
+- A goal (from → to) card grows with a raised pointing hand, after the finger is held on it first; bars stay in true proportion.
 - Default slots: left third, right third, lower band, 48px safe margin; chips along the top edge. The control window has a mouse fallback for all of it.
 
 ## How the pieces fit
