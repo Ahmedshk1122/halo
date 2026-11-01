@@ -141,7 +141,19 @@ npm run key gemini
 
 ## Claude
 
-To use Claude instead, run `npm run key claude` (it sets `HALO_PROVIDER=anthropic`). Models are set in `.env`:
+To use Claude instead, run `npm run key claude` (it sets `HALO_PROVIDER=anthropic`).
+
+Halo uses two models. The **director** (Haiku, fast) decides on every few words what to show and writes lists, steps and charts. The **artist** (Sonnet 5.5) draws the drawings: the director writes a brief, and the artist draws it line by line while you watch, so the first strokes appear in a few seconds. Drawings happen a few times per talk, so a stronger model costs little there.
+
+```bash
+npm run artist claude-opus-5-5       # draw with Opus 5.5
+npm run artist claude-sonnet-5-5     # back to Sonnet 5.5 (default)
+npm run artist gemini                # draw with free Gemini Flash (needs a Gemini key)
+```
+
+Restart `npm run dev` after switching. Each drawing's decision log entry says which model drew it and how long the first strokes and the whole drawing took.
+
+Models are set in `.env`:
 
 | Variable | Default | Used for |
 | --- | --- | --- |
@@ -149,6 +161,9 @@ To use Claude instead, run `npm run key claude` (it sets `HALO_PROVIDER=anthropi
 | `HALO_DIRECTOR_EFFORT` | `low` | Lower is faster. |
 | `HALO_PLANNER_MODEL` | `claude-opus-5-5` | The one planning pass over your talk notes. |
 | `HALO_PLANNER_EFFORT` | `medium` | |
+| `HALO_ARTIST_MODEL` | `claude-sonnet-5-5` | Draws the drawings, streamed line by line. |
+| `HALO_ARTIST_EFFORT` | `low` | |
+| `HALO_ARTIST_PROVIDER` | same as `HALO_PROVIDER` | `gemini` to draw with Gemini (`GEMINI_ARTIST_MODEL`, default `gemini-flash-latest`). |
 
 - Output is structured with tool use and JSON schemas: one tool per template (`draw` is the main one), plus `show_prepared` and `act`. Strict schemas are used where the API's grammar size allows.
 - The director's rules, tools and data catalog are prompt-cached, and pre-warmed when you start listening. The cache is refreshed every four minutes while you listen.

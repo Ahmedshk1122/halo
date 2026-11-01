@@ -1,6 +1,11 @@
 // Specs for /gallery. They go through the same resolver and grounding check as
 // the director's output, so a broken sample shows up here first.
+import { parseElement, type DrawElement } from "../../shared/drawing";
 import type { VisualSpec } from "../../shared/visuals";
+import pitchLines from "../../samples/drawing_pitch.svgl?raw";
+
+/** A drawing as the artist streams it: one SVG element per line. */
+const drawn = (lines: string) => lines.split("\n").map(parseElement).filter((e): e is DrawElement => e !== null);
 
 const none = { match_column: "", match_value: "" };
 
@@ -294,6 +299,20 @@ export const SAMPLE_SPECS: { name: string; spec: VisualSpec; reveal?: number; sa
         { id: "h", label: "Hamilton", x: 76, y: 44, kind: "car", tone: "accent", cue: "" },
         { id: "r", label: "Rival", x: 81, y: 49, kind: "car", tone: "muted", cue: "" },
       ],
+    },
+  },
+  {
+    name: "Drawing: football pitch",
+    spec: {
+      template: "drawing",
+      title: "A football pitch",
+      caption: "",
+      aliases: ["pitch"],
+      style: "float",
+      aspect: "wide",
+      brief: "A football pitch seen from above",
+      elements: drawn(pitchLines),
+      status: "done",
     },
   },
   {
