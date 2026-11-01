@@ -76,6 +76,7 @@ Every visual on the video should feel like Apple Keynote or visionOS made it: ca
 - **Reveal** (`shared/reveal.ts`): list items appear when their cue words are spoken. The director builds lists item by item with `replace_id` as they are said; prepared visuals reveal on cues with a pacing fallback.
 - **Voice commands** (`src/control/director/commands.ts`) are handled locally for speed; anything unresolved becomes an explicit director request.
 - **Notes planning** (`server/planner/planner.ts`): one pass with `prepare_*` tools; every prepared visual is grounded before use.
+- **Background awareness** (`shared/backdrop.ts`, `src/control/backdropSense.ts`): the control window samples its camera preview behind each on-stage visual (~600 ms, with hysteresis): bright or dark, calm or busy. `backingFor` (`stageSync.ts`) turns that into float or glass (busy → glass under Auto), light or dark glass (Glass: Auto), and dark or light ink for floating visuals. The artist is told what is behind a drawing so it picks colors that read.
 - **Hands** (`shared/gestures.ts` pure state machine, `src/hands/tracker.ts` MediaPipe, `src/control/hands/`): gestures and the mouse fallback work in the presenter's mirrored frame; the face keep-out flows into placement.
 - **Latency:** end of speech → stage render ack (`rendered` message) is logged per decision; the toolbar shows the median of the last five. The director prefix is pre-warmed with a `max_tokens: 0` request when listening starts.
 

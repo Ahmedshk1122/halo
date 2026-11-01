@@ -38,7 +38,16 @@ export interface DrawRequest {
   said: string[];
   /** The drawing so far, as lines, when this is an update. */
   previous: string[];
+  /** What the camera shows behind the drawing: bright, dark or busy (empty when unknown). */
+  behind?: string;
 }
+
+const BEHIND: Record<string, string> = {
+  bright:
+    "The video behind the drawing is bright. Halo shows ink colors dark here. Avoid white and pale colors for lines and labels that sit on the video; use ink and strong colors.",
+  dark: "The video behind the drawing is dark. Halo shows ink colors light here. Avoid black and dark colors for lines and labels that sit on the video.",
+  busy: "The video behind the drawing is busy, so Halo puts it on a glass card. Any colors read well.",
+};
 
 export function artistUserMessage(req: DrawRequest): string {
   const c = CANVAS[req.aspect] ?? CANVAS.wide;
@@ -47,6 +56,7 @@ export function artistUserMessage(req: DrawRequest): string {
     req.caption ? `<caption>${req.caption}</caption>` : "",
     `<brief>\n${req.brief}\n</brief>`,
     `<canvas width="${c.w}" height="${c.h}" style="${req.style}" />`,
+    req.behind && BEHIND[req.behind] ? `<behind>${BEHIND[req.behind]}</behind>` : "",
     `<numbers_said>${req.said.length ? req.said.join(", ") : "none"}</numbers_said>`,
   ];
   if (req.previous.length) {

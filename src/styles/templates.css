@@ -672,7 +672,8 @@
 }
 .tpl-drawing-svg {
   display: block;
-  overflow: visible;
+  /* Whatever the artist draws stays inside its canvas. */
+  overflow: hidden;
   font-family: var(--font-system);
 }
 .tpl-drawing-pending {

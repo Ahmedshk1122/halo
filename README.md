@@ -172,7 +172,8 @@ Models are set in `.env`:
 ## Settings
 
 - **How proactive Halo is:** quiet, balanced or eager. Quiet also leaves about 8 seconds between new visuals; balanced and eager show each one as soon as it helps.
-- **Glass:** light or dark material.
+- **Glass:** Auto (default) matches each visual to what your camera shows behind it: light glass on bright backgrounds, dark glass on dark ones. Or always light, always dark.
+- **Behind visuals:** Auto lets drawings float straight on your video, with dark text on bright backgrounds and light text on dark ones, and puts them on glass when the background is too busy to read. Or always glass, or never.
 - **Hand tracking**, **face zone** in the preview, **reduce motion** (the macOS setting is always respected), **camera**.
 
 ## Privacy

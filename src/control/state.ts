@@ -5,7 +5,11 @@ import type { DataTable } from "../../shared/data";
 import type { AIProvider, DirectorAction, Proactivity } from "../../shared/director";
 import type { Rect } from "../../shared/geometry";
 import type { Slot } from "../../shared/layout";
+import type { Backdrop } from "../../shared/backdrop";
 import type { GlassTheme } from "../../shared/stage";
+
+/** Glass material: auto matches each visual to what the camera shows behind it. */
+export type GlassChoice = GlassTheme | "auto";
 import type { SpokenNumber } from "../../shared/spoken";
 import type { ResolvedVisual, TemplateId, VisualSpec } from "../../shared/visuals";
 import { createStore } from "./createStore";
@@ -43,6 +47,8 @@ export interface VisualInstance {
   wordsAtReveal: number;
   /** Goal cards can be grown by a raised pointing hand until this time. */
   growableUntil?: number;
+  /** What the camera shows behind it (bright or dark, busy or calm), sampled live. */
+  backdrop?: Backdrop;
 }
 
 export interface TranscriptEntry {
@@ -122,7 +128,7 @@ export interface ControlState {
   /** Tucked visual ids, oldest first. */
   chips: string[];
   nextVisualNumber: number;
-  glass: GlassTheme;
+  glass: GlassChoice;
   /** What sits behind visuals: auto lets Halo choose per visual; card or float for all. */
   backing: Backing;
   cameraDeviceId: string | null;
@@ -163,7 +169,7 @@ export const store = createStore<ControlState>({
   onStage: [],
   chips: [],
   nextVisualNumber: 1,
-  glass: "light",
+  glass: "auto",
   backing: "auto",
   cameraDeviceId: null,
   reducedMotion: false,

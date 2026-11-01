@@ -2,7 +2,21 @@
 
 import type { ChannelMessage, StageState } from "../../shared/stage";
 import { HaloChannel, now } from "../sync/channel";
-import { store, type ControlState } from "./state";
+import { store, type ControlState, type VisualInstance } from "./state";
+
+/**
+ * How a visual sits on the video: floating (no card) or on glass, which glass,
+ * and which ink. Uses what the camera shows behind it: a busy background gets
+ * glass under Auto; glass and ink match a bright or dark background.
+ */
+export function backingFor(s: Pick<ControlState, "backing" | "glass">, v: VisualInstance) {
+  const b = v.backdrop;
+  const wantsFloat = s.backing === "float" || (s.backing === "auto" && v.spec?.style === "float");
+  const float = wantsFloat && !(s.backing === "auto" && b?.busy);
+  const glass = s.glass === "auto" ? (b?.tone === "dark" ? "dark" : "light") : s.glass;
+  const ink: "light" | "dark" = b?.tone === "light" ? "dark" : "light";
+  return { float, glass, ink };
+}
 
 export const channel = new HaloChannel();
 
@@ -15,7 +29,7 @@ export function deriveStageState(s: ControlState): StageState {
   seq += 1;
   cached = {
     seq,
-    glass: s.glass,
+    glass: s.glass === "auto" ? "light" : s.glass,
     visuals: s.onStage
       .map((id) => s.visuals[id])
       .filter(Boolean)
@@ -28,7 +42,7 @@ export function deriveStageState(s: ControlState): StageState {
         reveal: v.reveal,
         target: v.target,
         dragging: v.dragging,
-        float: s.backing === "float" || (s.backing === "auto" && v.spec?.style === "float"),
+        ...backingFor(s, v),
       })),
     chips: s.chips
       .map((id) => s.visuals[id])

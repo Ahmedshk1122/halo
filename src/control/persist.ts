@@ -2,7 +2,9 @@
 import { store, type ControlState } from "./state";
 
 const KEY = "halo.v1";
-type Persisted = Pick<ControlState, "tables" | "glass" | "backing" | "cameraDeviceId" | "reducedMotion"> & {
+type Persisted = Pick<ControlState, "tables" | "backing" | "cameraDeviceId" | "reducedMotion"> & {
+  /** Glass choice (auto, light or dark). The older "glass" key held light or dark and is ignored, so auto becomes the default. */
+  glassMode?: ControlState["glass"];
   provider?: ControlState["director"]["provider"];
   proactivity?: ControlState["director"]["proactivity"];
   hands?: boolean;
@@ -16,7 +18,7 @@ export function restore() {
     const saved = JSON.parse(raw) as Partial<Persisted>;
     store.set({
       ...(Array.isArray(saved.tables) ? { tables: saved.tables } : {}),
-      ...(saved.glass === "dark" || saved.glass === "light" ? { glass: saved.glass } : {}),
+      ...(saved.glassMode === "dark" || saved.glassMode === "light" || saved.glassMode === "auto" ? { glass: saved.glassMode } : {}),
       ...(saved.backing === "auto" || saved.backing === "card" || saved.backing === "float" ? { backing: saved.backing } : {}),
       ...(typeof saved.cameraDeviceId === "string" ? { cameraDeviceId: saved.cameraDeviceId } : {}),
       ...(typeof saved.reducedMotion === "boolean" ? { reducedMotion: saved.reducedMotion } : {}),
@@ -55,7 +57,7 @@ export function startPersisting() {
     }
     const data: Persisted = {
       tables: s.tables,
-      glass: s.glass,
+      glassMode: s.glass,
       backing: s.backing,
       cameraDeviceId: s.cameraDeviceId,
       reducedMotion: s.reducedMotion,

@@ -120,6 +120,25 @@
 .halo-glass[data-backing="float"] svg {
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6)) drop-shadow(0 0 12px rgba(0, 0, 0, 0.4));
 }
+/* Floating over a bright background: dark ink with a light halo. */
+.halo-glass[data-backing="float"][data-ink="dark"] {
+  --label: rgba(0, 0, 0, 0.9);
+  --label-2: rgba(0, 0, 0, 0.74);
+  --label-3: rgba(0, 0, 0, 0.55);
+  --fill: rgba(0, 0, 0, 0.14);
+  --fill-2: rgba(0, 0, 0, 0.08);
+  --shape-edge: rgba(0, 0, 0, 0.7);
+  --track: rgba(0, 0, 0, 0.6);
+  --grid: rgba(0, 0, 0, 0.22);
+  --separator: rgba(0, 0, 0, 0.25);
+  --glass-bg-solid: rgba(255, 255, 255, 0.92);
+  text-shadow:
+    0 1px 2px rgba(255, 255, 255, 0.75),
+    0 0 16px rgba(255, 255, 255, 0.6);
+}
+.halo-glass[data-backing="float"][data-ink="dark"] svg {
+  filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.7)) drop-shadow(0 0 10px rgba(255, 255, 255, 0.45));
+}
 
 .halo-glass[data-accent="blue"] { --accent: var(--blue); --accent-text: var(--blue-text); }
 .halo-glass[data-accent="green"] { --accent: var(--green); --accent-text: var(--green-text); }

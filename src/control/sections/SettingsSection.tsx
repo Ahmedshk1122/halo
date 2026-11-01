@@ -79,17 +79,18 @@ export function SettingsSection() {
         </Row>
       </Group>
       <Group title="Appearance">
-        <Row label="Glass" detail="Light suits bright rooms, dark suits dim ones">
+        <Row label="Glass" detail="Auto matches each visual to what the camera shows behind it">
           <Segmented
             value={glass}
             onChange={(g) => store.set({ glass: g })}
             options={[
+              { value: "auto", label: "Auto" },
               { value: "light", label: "Light" },
               { value: "dark", label: "Dark" },
             ]}
           />
         </Row>
-        <Row label="Behind visuals" detail="Auto lets Halo choose: drawings float on the video, text-heavy visuals sit on glass.">
+        <Row label="Behind visuals" detail="Auto: drawings float on the video unless what is behind them is too busy to read; text-heavy visuals sit on glass.">
           <Segmented
             value={backing}
             onChange={(b) => store.set({ backing: b })}

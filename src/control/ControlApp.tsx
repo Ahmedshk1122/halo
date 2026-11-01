@@ -14,6 +14,7 @@ import { NotesSection } from "./sections/NotesSection";
 import { LiveSection } from "./sections/LiveSection";
 import { SettingsSection } from "./sections/SettingsSection";
 import { startStageSync } from "./stageSync";
+import { startBackdropSensing } from "./backdropSense";
 import { store, type Section } from "./state";
 import { Button } from "./ui/controls";
 import { aiName, useServerHealth } from "./useServerHealth";
@@ -47,6 +48,7 @@ export function ControlApp() {
     startPersisting();
     startStageSync();
     startDirector();
+    startBackdropSensing();
     startHandSync();
     catchWindowDrops();
   }, []);

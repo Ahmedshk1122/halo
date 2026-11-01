@@ -23,6 +23,10 @@ export interface StageVisual {
   dragging: boolean;
   /** Drawn straight onto the video with no glass card behind it. */
   float?: boolean;
+  /** Glass material for this visual (overrides the stage-wide one). */
+  glass?: GlassTheme;
+  /** Floating visuals: dark ink on bright backgrounds, light ink on dark ones. */
+  ink?: "light" | "dark";
 }
 
 export interface StageChip {

@@ -9,7 +9,9 @@ import { prepareVisual } from "../../../shared/resolve";
 import type { SpokenNumber } from "../../../shared/spoken";
 import type { DrawingSpec } from "../../../shared/visuals";
 import { now } from "../../sync/channel";
+import { senseVisual } from "../backdropSense";
 import { updateVisual } from "../stageActions";
+import { backingFor } from "../stageSync";
 import { store, type DecisionEntry } from "../state";
 
 /** One drawing request per visual; a newer one replaces it. */
@@ -43,6 +45,11 @@ export async function drawInto(visualId: string, previous: DrawElement[], opts: 
   const spec = v?.spec as DrawingSpec | null;
   if (!v || !spec || spec.template !== "drawing") return;
 
+  // What the camera shows behind it decides float or glass, and which colors will read.
+  const backdrop = senseVisual(visualId) ?? v.backdrop ?? null;
+  const backing = backingFor(store.get(), { ...v, backdrop: backdrop ?? undefined });
+  const behind = !backdrop ? "" : backdrop.busy ? "busy" : backdrop.tone === "light" ? "bright" : "dark";
+
   const started = now();
   const prevKeys = new Set(previous.map((e) => e.key));
   const fresh: DrawElement[] = [];
@@ -75,7 +82,8 @@ export async function drawInto(visualId: string, previous: DrawElement[], opts: 
         caption: spec.caption,
         brief: spec.brief,
         aspect: spec.aspect,
-        style: spec.style ?? "card",
+        style: backing.float ? "float" : "card",
+        behind,
         said: opts.said.map(sayable),
         previous: previous.map(elementLine),
       }),
