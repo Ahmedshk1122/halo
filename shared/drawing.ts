@@ -5,11 +5,14 @@
 
 export type DrawAspect = "wide" | "square" | "tall";
 
-/** Drawing canvas in stage pixels (the viewBox). Text sizes are in the same units. */
+/**
+ * Drawing canvas in stage pixels (the viewBox); text sizes are in the same units.
+ * Sized so a drawing fits beside the face at full size, keeping text at its real size.
+ */
 export const CANVAS: Record<DrawAspect, { w: number; h: number }> = {
-  wide: { w: 960, h: 540 },
-  square: { w: 720, h: 720 },
-  tall: { w: 600, h: 880 },
+  wide: { w: 520, h: 330 },
+  square: { w: 500, h: 500 },
+  tall: { w: 440, h: 700 },
 };
 
 /** Colors the artist may use, by name. Each maps to a design token, so drawings stay on brand and adapt to light and dark. */

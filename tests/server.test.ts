@@ -161,7 +161,7 @@ describe("artist", async () => {
     expect(text.split("\n").filter(Boolean)).toHaveLength(2);
     expect(seen!.system).toBe(ARTIST_SYSTEM);
     expect(seen!.user).toContain("A football pitch seen from above");
-    expect(seen!.user).toContain('width="960" height="540" style="float"');
+    expect(seen!.user).toContain('width="520" height="330" style="float"');
     expect(seen!.user).toContain("44%");
   });
 

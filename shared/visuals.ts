@@ -38,7 +38,7 @@ export const TEMPLATE_LABELS: Record<TemplateId, string> = {
   drawing: "Drawing",
 };
 
-/** Lucide icons the director may pick from. Kept short so the model chooses well. */
+/** Icons bundled with the app (instant). Any other Lucide icon name also works; it loads on first use. */
 export const ICON_NAMES = [
   "layout-template",
   "download",
@@ -71,7 +71,8 @@ export const ICON_NAMES = [
   "plug",
   "wand",
 ] as const;
-export type IconName = (typeof ICON_NAMES)[number];
+/** Any Lucide icon name, kebab-case (e.g. "trees", "cable-car"). Unknown names fall back to sparkles. */
+export type IconName = string;
 
 // ---------------------------------------------------------------------------
 // Data references

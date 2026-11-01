@@ -41,12 +41,13 @@ import {
   Quote,
   Goal,
   Shapes, PenTool } from "lucide-react";
+import { DynamicIcon, iconNames, type IconName as DynamicIconName } from "lucide-react/dynamic";
 import type { IconName, TemplateId } from "../../shared/visuals";
 
 /** Lucide at a 1.75 stroke with rounded caps matches the feel of SF Symbols. */
 export const ICON_STROKE = 1.75;
 
-const ICONS: Record<IconName, LucideIcon> = {
+const ICONS: Record<string, LucideIcon> = {
   "layout-template": LayoutTemplate,
   download: Download,
   "user-plus": UserPlus,
@@ -95,15 +96,35 @@ const TEMPLATE_ICONS: Record<TemplateId, LucideIcon> = {
   drawing: PenTool,
 };
 
+const known = new Set<string>(iconNames);
+
+/** Bundled icons render at once; any other Lucide icon loads on first use; unknown names get sparkles. */
 export function Icon({ name, size, className }: { name: IconName; size: number; className?: string }) {
-  const Component = ICONS[name] ?? Sparkles;
-  return <Component size={size} strokeWidth={ICON_STROKE} className={className} aria-hidden />;
+  const Component = ICONS[name];
+  if (Component) return <Component size={size} strokeWidth={ICON_STROKE} className={className} aria-hidden />;
+  if (known.has(name)) {
+    return (
+      <DynamicIcon
+        name={name as DynamicIconName}
+        size={size}
+        strokeWidth={ICON_STROKE}
+        className={className}
+        aria-hidden
+        fallback={() => <Sparkles size={size} strokeWidth={ICON_STROKE} className={className} aria-hidden />}
+      />
+    );
+  }
+  return <Sparkles size={size} strokeWidth={ICON_STROKE} className={className} aria-hidden />;
 }
 
 /** An icon placed inside an SVG drawing (diagrams). */
 export function SvgIcon({ name, x, y, size, color }: { name: IconName; x: number; y: number; size: number; color: string }) {
-  const Component = ICONS[name] ?? Sparkles;
-  return <Component x={x} y={y} width={size} height={size} strokeWidth={ICON_STROKE} color={color} aria-hidden />;
+  const Component = ICONS[name];
+  if (!Component && known.has(name)) {
+    return <DynamicIcon name={name as DynamicIconName} x={x} y={y} width={size} height={size} strokeWidth={ICON_STROKE} color={color} aria-hidden />;
+  }
+  const C = Component ?? Sparkles;
+  return <C x={x} y={y} width={size} height={size} strokeWidth={ICON_STROKE} color={color} aria-hidden />;
 }
 
 export function TemplateIcon({ template, size }: { template: TemplateId; size: number }) {

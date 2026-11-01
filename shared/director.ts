@@ -3,7 +3,7 @@
 // maps back to a decision. Shared by the server, the offline replay director
 // and the tests.
 
-import { ICON_NAMES, UI_BLOCK_KINDS, type TemplateId, type VisualSpec } from "./visuals";
+import { UI_BLOCK_KINDS, type TemplateId, type VisualSpec } from "./visuals";
 
 export type Proactivity = "quiet" | "balanced" | "eager";
 /** Model providers the local server can use. */
@@ -201,7 +201,9 @@ const seriesRef = (description: string) =>
     description,
   );
 
-const icon = enm(ICON_NAMES, "Icon that matches the item.");
+const icon = str(
+  "A Lucide icon name in kebab-case that fits this item specifically, e.g. trees, bridge, cable-car, utensils, music, sun, mountain, car, book-open. Give each item its own fitting icon.",
+);
 const tone = enm(["accent", "neutral", "highlight", "muted"], "accent: the main thing; highlight: what the presenter is pointing out (orange); neutral; muted: background.");
 const diagramCue = str("With reveal progressive: two to four words the presenter says when this part should appear. Empty to show it at once.");
 const cue = str("Two to four distinctive words the presenter says for this item, from their wording. Reveals the item as they say it.");
@@ -311,7 +313,7 @@ const TEMPLATE_PROPS: Record<TemplateId, Record<string, JsonSchema>> = {
         h: num("Height 0-100, or 0 to fit the text."),
         shape: enm(["rect", "pill", "circle", "diamond", "none"], "none is a floating label."),
         tone: tone,
-        icon: enm([...ICON_NAMES, "none"], "Icon beside the label, or none."),
+        icon: str("A Lucide icon name in kebab-case beside the label, or none."),
         cue: diagramCue,
       }),
       "The labeled boxes or bubbles of the diagram.",

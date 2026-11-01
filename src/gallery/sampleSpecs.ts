@@ -351,12 +351,20 @@ export const SAMPLE_SPECS: { name: string; spec: VisualSpec; reveal?: number; sa
       title: "Why people love the city",
       aliases: ["reasons"],
       reveal: "all",
-      points: ["Street food", "Old forts", "Markets", "Metro", "Gardens", "Music", "Festivals", "Bookshops", "Cafes", "People"].map((text) => ({
-        icon: "sparkles" as const,
-        text,
-        detail: "",
-        cue: "",
-      })),
+      points: (
+        [
+          ["utensils", "Street food"],
+          ["castle", "Old forts"],
+          ["store", "Markets"],
+          ["train-front", "Metro"],
+          ["flower-2", "Gardens"],
+          ["music", "Music"],
+          ["party-popper", "Festivals"],
+          ["book-open", "Bookshops"],
+          ["coffee", "Cafes"],
+          ["users", "People"],
+        ] as const
+      ).map(([icon, text]) => ({ icon, text, detail: "", cue: "" })),
     },
   },
   {

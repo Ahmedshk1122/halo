@@ -201,6 +201,14 @@ function tidyList(items: unknown, maxItems: number, maxLen: number): string[] {
   return list<unknown>(items).map((s) => tidy(s, maxLen)).filter(Boolean).slice(0, maxItems);
 }
 
+/** Icon names as Lucide spells them: lowercase words joined by dashes ("Cable Car" → "cable-car"). */
+const iconName = (v: unknown) =>
+  String(v ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "sparkles";
+
 const NONE_REF: ScalarRef = { table: "", column: "", pick: "none", match_column: "", match_value: "" };
 const EMPTY_SERIES: SeriesRef = { table: "", x: "", y: "", filter_column: "", filter_value: "" };
 
@@ -272,7 +280,7 @@ export function tidySpec(spec: VisualSpec): VisualSpec {
         reveal: spec.reveal === "all" ? "all" : "progressive",
         points: list<StrategySpec["points"][number]>(spec.points)
           .slice(0, MAX_ITEMS)
-          .map((p) => ({ ...p, icon: p.icon, text: tidy(p.text, 52), detail: tidy(p.detail, 64), cue: cue(p.cue) }))
+          .map((p) => ({ ...p, icon: iconName(p.icon), text: tidy(p.text, 52), detail: tidy(p.detail, 64), cue: cue(p.cue) }))
           .filter((p) => p.text),
       };
     case "roadmap":
@@ -292,7 +300,7 @@ export function tidySpec(spec: VisualSpec): VisualSpec {
         reveal: spec.reveal === "all" ? "all" : "progressive",
         steps: list<ProcessSpec["steps"][number]>(spec.steps)
           .slice(0, MAX_ITEMS)
-          .map((p) => ({ ...p, label: tidy(p.label, 28), detail: tidy(p.detail, 48), cue: cue(p.cue) }))
+          .map((p) => ({ ...p, icon: iconName(p.icon), label: tidy(p.label, 28), detail: tidy(p.detail, 48), cue: cue(p.cue) }))
           .filter((p) => p.label),
       };
     case "ui_sketch":
