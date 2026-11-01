@@ -75,3 +75,62 @@ describe("Gemini errors", () => {
   });
 });
 
+
+describe("Claude strict tools", async () => {
+  const Anthropic = (await import("@anthropic-ai/sdk")).default;
+  const { AnthropicLLM, strictToolNames } = await import("../server/llm/anthropic");
+  const { directorTools } = await import("../shared/director");
+  const tools = directorTools();
+  const grammarError = () =>
+    Anthropic.APIError.generate(
+      400,
+      { type: "error", error: { type: "invalid_request_error", message: "The compiled grammar is too large, which would cause performance issues. Simplify your tool schemas or reduce the number of strict tools." } },
+      undefined,
+      new Headers(),
+    );
+  const reply = {
+    id: "msg_1",
+    type: "message",
+    role: "assistant",
+    model: "claude-haiku-5-5",
+    stop_reason: "tool_use",
+    content: [{ type: "tool_use", id: "t1", name: "act", input: { action: "none", reason: "Greeting", beat: "Intro", arc: "", target_ids: [] } }],
+    usage: { input_tokens: 10, output_tokens: 5, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 },
+  };
+  const req: ToolCallRequest = { model: "claude-haiku-5-5", effort: "low", system: [{ text: "rules", cache: true }], user: "Hi", tools, mode: "one", maxTokens: 2048, timeoutMs: 5000 };
+
+  it("keeps the smallest tools strict within the budget", () => {
+    expect(strictToolNames(tools, 1).size).toBe(tools.length);
+    expect(strictToolNames(tools, 0).size).toBe(0);
+    const half = strictToolNames(tools, 0.5);
+    expect(half.has("act")).toBe(true);
+    expect(half.has("show_diagram")).toBe(false);
+  });
+
+  it("retries with fewer strict tools when the grammar is too large, and remembers it", async () => {
+    const sent: { tools: { name: string; strict?: boolean }[] }[] = [];
+    let failures = 2;
+    const create = (async (body: unknown) => {
+      sent.push(body as (typeof sent)[number]);
+      if (failures-- > 0) throw grammarError();
+      return reply;
+    }) as unknown as ConstructorParameters<typeof AnthropicLLM>[1];
+    const llm = new AnthropicLLM("sk-ant-test", create);
+    const res = await llm.callTools(req);
+    expect(res.calls[0].name).toBe("act");
+    const strictCount = sent.map((b) => b.tools.filter((t) => t.strict).length);
+    expect(strictCount[0]).toBe(tools.length);
+    expect(strictCount[1]).toBeLessThan(strictCount[0]);
+    expect(strictCount[2]).toBeLessThan(strictCount[1]);
+    await llm.callTools(req);
+    expect(sent).toHaveLength(4);
+    expect(sent[3].tools.filter((t) => t.strict).length).toBe(strictCount[2]);
+  });
+
+  it("passes other errors straight through", async () => {
+    const create = (async () => {
+      throw Anthropic.APIError.generate(401, { type: "error", error: { type: "authentication_error", message: "invalid x-api-key" } }, undefined, new Headers());
+    }) as unknown as ConstructorParameters<typeof AnthropicLLM>[1];
+    await expect(new AnthropicLLM("sk-ant-test", create).callTools(req)).rejects.toBeInstanceOf(Anthropic.AuthenticationError);
+  });
+});

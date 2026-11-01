@@ -7,25 +7,74 @@ const NO_FORCED_TOOL_CHOICE = /^claude-(opus-5-5|sonnet-5-5|fable-5-1|mythos-5-1
 // Models where the server-side refusal fallback is recommended by default.
 const FALLBACK_DEFAULT = /^claude-(fable-5-1|opus-5-5|opus-5$|sonnet-5-5)/;
 
+/**
+ * Strict tools compile into one grammar per request, and the API caps its size.
+ * When it says the grammar is too large, Halo keeps strict on the smallest tools
+ * whose schemas fit in this share of the total, then tries the next level. Every
+ * visual is still shape-checked by prepareVisual before it reaches the stage.
+ */
+const STRICT_LEVELS = [1, 0.5, 0.25, 0];
+
+/** True for the 400 that says the strict tools' grammar is too large. */
+export function isGrammarTooLarge(err: unknown): boolean {
+  return err instanceof Anthropic.APIError && err.status === 400 && /grammar is too large|number of strict tools/i.test(err.message);
+}
+
+/** Names of the tools that stay strict at a level: the smallest schemas first, within the size budget. */
+export function strictToolNames(tools: ToolCallRequest["tools"], level: number): Set<string> {
+  if (level >= 1) return new Set(tools.map((t) => t.name));
+  const sized = tools.map((t) => ({ name: t.name, size: JSON.stringify(t.input_schema).length })).sort((a, b) => a.size - b.size);
+  const budget = sized.reduce((sum, t) => sum + t.size, 0) * level;
+  const names = new Set<string>();
+  let used = 0;
+  for (const t of sized) {
+    if (used + t.size > budget) break;
+    used += t.size;
+    names.add(t.name);
+  }
+  return names;
+}
+
+type CreateFn = (body: Anthropic.Beta.MessageCreateParamsNonStreaming, opts: { timeout: number }) => Promise<Anthropic.Beta.BetaMessage>;
+
 export class AnthropicLLM implements LLMClient {
   readonly provider = "anthropic" as const;
-  private client: Anthropic | null;
+  private create: CreateFn | null;
+  /** The strict level that worked, per model and tool set, so later requests (and the cache) stay the same. */
+  private strictLevel = new Map<string, number>();
 
-  constructor(apiKey: string) {
-    this.client = apiKey ? new Anthropic({ apiKey, maxRetries: 1 }) : null;
+  constructor(apiKey: string, create?: CreateFn) {
+    const client = apiKey ? new Anthropic({ apiKey, maxRetries: 1 }) : null;
+    this.create = create ?? (client ? (body, opts) => client.beta.messages.create(body, opts) : null);
   }
 
   get available() {
-    return this.client !== null;
+    return this.create !== null;
   }
 
   async callTools(req: ToolCallRequest): Promise<ToolCallResult> {
-    if (!this.client) throw new Error("ANTHROPIC_API_KEY is not set in .env");
+    if (!this.create) throw new Error("ANTHROPIC_API_KEY is not set in .env");
+    const key = `${req.model}|${req.tools.map((t) => t.name).join(",")}`;
+    for (let i = this.strictLevel.get(key) ?? 0; ; i++) {
+      try {
+        const result = await this.send(req, strictToolNames(req.tools, STRICT_LEVELS[i]));
+        this.strictLevel.set(key, i);
+        return result;
+      } catch (err) {
+        if (!isGrammarTooLarge(err) || i + 1 >= STRICT_LEVELS.length) throw err;
+        const next = strictToolNames(req.tools, STRICT_LEVELS[i + 1]).size;
+        console.warn(`Claude: the strict tool grammar is too large; retrying with ${next} of ${req.tools.length} tools strict.`);
+        this.strictLevel.set(key, i + 1);
+      }
+    }
+  }
+
+  private async send(req: ToolCallRequest, strict: Set<string>): Promise<ToolCallResult> {
     const forced = req.mode === "one" && !NO_FORCED_TOOL_CHOICE.test(req.model);
     const fallback = FALLBACK_DEFAULT.test(req.model);
     const started = performance.now();
 
-    const response = await this.client.beta.messages.create(
+    const response = await this.create!(
       {
         model: req.model,
         max_tokens: req.maxTokens,
@@ -35,7 +84,11 @@ export class AnthropicLLM implements LLMClient {
           ...(b.cache ? { cache_control: { type: "ephemeral" as const } } : {}),
         })),
         messages: [{ role: "user", content: req.user }],
-        tools: req.tools.map((t) => ({ ...t, input_schema: t.input_schema as Anthropic.Beta.BetaTool.InputSchema, strict: true })),
+        tools: req.tools.map((t) => ({
+          ...t,
+          input_schema: t.input_schema as Anthropic.Beta.BetaTool.InputSchema,
+          ...(strict.has(t.name) ? { strict: true } : {}),
+        })),
         // A max_tokens: 0 warm-up only runs prefill to write the cache; it rejects a forced
         // tool_choice, and tool_choice does not affect the cached tools + system prefix.
         tool_choice:
