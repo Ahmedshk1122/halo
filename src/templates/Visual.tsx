@@ -2,6 +2,7 @@ import type { ResolvedVisual } from "../../shared/visuals";
 import { BarChart } from "./BarChart";
 import { Comparison } from "./Comparison";
 import { DiagramCard } from "./DiagramCard";
+import { DrawingCard } from "./DrawingCard";
 import { Funnel } from "./Funnel";
 import { GoalCard } from "./GoalCard";
 import { LineChart } from "./LineChart";
@@ -21,6 +22,8 @@ export interface TemplateContext {
 /** Renders the content of a visual. The glass container is drawn by VisualFrame. */
 export function VisualContent({ v, ctx }: { v: ResolvedVisual; ctx: TemplateContext }) {
   switch (v.template) {
+    case "drawing":
+      return <DrawingCard v={v} reveal={ctx.reveal} />;
     case "metric":
       return <MetricCard v={v} />;
     case "line":

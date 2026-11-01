@@ -1,5 +1,5 @@
 import { ApiError, FunctionCallingConfigMode, GoogleGenAI, ThinkingLevel, type FunctionDeclaration } from "@google/genai";
-import type { LLMClient, LLMError, ToolCall, ToolCallRequest, ToolCallResult } from "./types";
+import type { LLMClient, LLMError, TextRequest, ToolCall, ToolCallRequest, ToolCallResult } from "./types";
 
 const THINKING: Record<string, ThinkingLevel> = {
   minimal: ThinkingLevel.MINIMAL,
@@ -66,6 +66,25 @@ export class GeminiLLM implements LLMClient {
       ms,
       usage: { input: (usage?.promptTokenCount ?? 0) - cached, output: usage?.candidatesTokenCount ?? 0, cacheRead: cached, cacheWrite: 0 },
     };
+  }
+
+  async *streamText(req: TextRequest): AsyncIterable<string> {
+    if (!this.ai) throw new Error("GEMINI_API_KEY is not set in .env");
+    const thinking = THINKING[this.thinkingLevel];
+    const stream = await this.ai.models.generateContentStream({
+      model: req.model,
+      contents: [{ role: "user", parts: [{ text: req.user }] }],
+      config: {
+        systemInstruction: req.system.map((b) => b.text).join("\n\n"),
+        maxOutputTokens: Math.max(req.maxTokens, 8192),
+        abortSignal: req.signal ? AbortSignal.any([req.signal, AbortSignal.timeout(req.timeoutMs)]) : AbortSignal.timeout(req.timeoutMs),
+        ...(thinking ? { thinkingConfig: { thinkingLevel: thinking } } : {}),
+      },
+    });
+    for await (const chunk of stream) {
+      const text = chunk.text;
+      if (text) yield text;
+    }
   }
 
   describeError(err: unknown): LLMError {

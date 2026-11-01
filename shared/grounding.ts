@@ -220,6 +220,10 @@ export function textFields(spec: VisualSpec): { field: string; text: string }[] 
       spec.paths.forEach((p, i) => push(`paths[${i}].label`, p.label));
       spec.markers.forEach((m, i) => push(`markers[${i}].label`, m.label));
       break;
+    case "drawing":
+      push("caption", spec.caption);
+      spec.elements.forEach((e, i) => e.tag === "text" && push(`elements[${i}]`, e.text));
+      break;
     case "statement":
       push("kicker", spec.kicker);
       push("text", spec.text);

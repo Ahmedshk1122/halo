@@ -27,6 +27,7 @@ import {
 import { onStageRendered } from "../stageSync";
 import { store, type ControlState, type DecisionEntry, type DecisionTrigger, type VisualInstance } from "../state";
 import { allVisuals, matchPrepared, matchVisual, parseCommand, type ParsedCommand } from "./commands";
+import { cancelAllDrawings, drawInto } from "./artist";
 import { ServerDirector, type DirectorProvider } from "./providers";
 
 export const TRANSCRIPT_WINDOW_SEC = 60;
@@ -334,6 +335,7 @@ class Director {
         return;
       case "clear":
         this.cancelDeferred();
+        cancelAllDrawings();
         clearStage();
         this.patchLog(ctx.logId, { ...base, outcome: "applied", onScreenMs: Math.round(now() - ctx.speechEndAt) });
         return;
@@ -360,7 +362,10 @@ class Director {
           this.apply({ ...d, action: "show", targetIds: [] }, ctx);
           return;
         }
-        const r = prepareVisual(d.visual, s.tables, { said: this.saidRecently() });
+        // A drawing being redrawn keeps showing its current parts while the new version streams in.
+        const redraw = d.visual.template === "drawing" && target.spec?.template === "drawing" ? target.spec.elements : null;
+        const incoming = redraw ? { ...d.visual, elements: redraw, status: "drawing" as const } : d.visual;
+        const r = prepareVisual(incoming, s.tables, { said: this.saidRecently() });
         if (!r.ok) {
           this.patchLog(ctx.logId, { ...base, outcome: "dropped", errors: r.errors, title: d.visual.title, template: d.visual.template });
           return;
@@ -374,6 +379,9 @@ class Director {
           },
         }));
         this.updateReveals();
+        if (r.spec.template === "drawing" && r.spec.status === "drawing") {
+          void drawInto(target.id, redraw ?? [], { said: this.saidRecently(), logId: ctx.logId, log: (id, p) => this.patchLog(id, p) });
+        }
         requestAnimationFrame(() =>
           this.patchLog(ctx.logId, {
             ...base,
@@ -443,6 +451,10 @@ class Director {
             store.set((x) => ({ visuals: { ...x.visuals, [id]: { ...x.visuals[id], growableUntil: now() + GROWABLE_MS } } }));
           }
           store.set((x) => ({ director: { ...x.director, lastShowAt: now() } }));
+          // A drawing appears as a placeholder now and draws itself as the artist streams it.
+          if (r.spec.template === "drawing" && r.spec.elements.length === 0) {
+            void drawInto(id, [], { said: this.saidRecently(), logId: ctx.logId, log: (lid, p) => this.patchLog(lid, p) });
+          }
           this.addVisualToBeat(id);
           this.latencyFor.set(id, ctx.logId);
           this.patchLog(ctx.logId, { ...base, outcome: "applied", visualId: id, title: r.visual.title, template: r.visual.template, ...(r.notes.length ? { notes: r.notes } : {}) });
@@ -677,6 +689,7 @@ class Director {
   reset() {
     this.generation += 1;
     this.cancelDeferred();
+    cancelAllDrawings();
     this.pending = null;
     window.clearTimeout(this.waitTimer);
     this.waitTimer = 0;

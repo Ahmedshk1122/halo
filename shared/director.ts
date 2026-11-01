@@ -57,7 +57,9 @@ export function similarTitle(a: string, b: string): boolean {
 export function specContent(spec: object | null, max = 3000): string {
   if (!spec) return "";
   const prune = (v: unknown, key = ""): unknown => {
-    if (key === "aliases" || key === "template") return undefined;
+    if (key === "aliases" || key === "template" || key === "status") return undefined;
+    // A drawing is described by its brief; its drawn parts would only flood the context.
+    if (key === "elements") return Array.isArray(v) && v.length ? `${v.length} parts drawn from the brief` : undefined;
     if (Array.isArray(v)) {
       const a = v.map((x) => prune(x)).filter((x) => x !== undefined);
       return a.length ? a : undefined;
@@ -213,6 +215,13 @@ const style = enm(
 
 /** Template-specific tool properties (the spec without template/title/aliases). */
 const TEMPLATE_PROPS: Record<TemplateId, Record<string, JsonSchema>> = {
+  drawing: {
+    caption: str("Short line under the title, or empty."),
+    aspect: enm(["wide", "square", "tall"], "Shape of the drawing: wide for scenes, maps, tracks and timelines; square for objects; tall for people, buildings and towers."),
+    brief: str(
+      "What the illustrator should draw, in detail: the subject and its real shape and layout (as it really looks), the parts to show and label with short words, what to emphasize, where things are, and any numbers the speaker said. For an update: the whole drawing as it should now be, including what is already there.",
+    ),
+  },
   metric: {
     caption: str("Short context under the title, words only, e.g. Weekly, this quarter."),
     value: scalarRef("The KPI value. Usually pick last."),
@@ -359,6 +368,8 @@ const TEMPLATE_PROPS: Record<TemplateId, Record<string, JsonSchema>> = {
 };
 
 const TOOL_DESCRIPTIONS: Record<TemplateId, string> = {
+  drawing:
+    "Draw anything, live: whatever the speaker is talking about or asks for, real or imagined, on Earth, in space or nowhere at all: a race track and an overtake, a football stadium, the solar system, how a heart pumps, a village and its river, a machine, a map, a scene from a story. You write the brief; a skilled illustrator draws it in real shapes and good colors as the speaker watches. Update it with replace_id as they add detail.",
   metric: "Show one headline number big, from what the presenter said or the data, with the change since an earlier value when there is one.",
   line: "Show how a number changes over time as a line chart, from numbers the presenter said or from the data. Up to three metrics as separate lines.",
   bar: "Compare values across categories (regions, products, teams) as bars, from numbers the presenter said or from the data.",
@@ -375,7 +386,9 @@ const TOOL_DESCRIPTIONS: Record<TemplateId, string> = {
 };
 
 export const TOOL_FOR_TEMPLATE: Record<TemplateId, string> = {
-  diagram: "draw",
+  drawing: "draw",
+  /** Earlier box-and-arrow drawing template; kept for prepared visuals and the gallery, not offered to the model. */
+  diagram: "show_diagram",
   strategy: "show_list",
   process: "show_steps",
   comparison: "show_comparison",
@@ -413,9 +426,12 @@ export interface ToolDef {
   input_schema: JsonSchema;
 }
 
+/** Templates the model can use, in the order its tools are listed (draw first). */
+export const OFFERED_TEMPLATES = (Object.keys(TOOL_FOR_TEMPLATE) as TemplateId[]).filter((t) => t !== "diagram");
+
 /** The director's tools. Order and content are stable so the prompt prefix caches. */
 export function directorTools(): ToolDef[] {
-  const show = (Object.keys(TOOL_FOR_TEMPLATE) as TemplateId[]).map((t) => ({
+  const show = OFFERED_TEMPLATES.map((t) => ({
     name: TOOL_FOR_TEMPLATE[t],
     description: TOOL_DESCRIPTIONS[t],
     input_schema: obj({
@@ -453,7 +469,7 @@ export function directorTools(): ToolDef[] {
 
 /** Tool definitions for the planner: same templates, keyed by a prepared id. */
 export function plannerTools(): ToolDef[] {
-  return (Object.keys(TOOL_FOR_TEMPLATE) as TemplateId[]).map((t) => ({
+  return OFFERED_TEMPLATES.map((t) => ({
     name: PLANNER_TOOL_FOR_TEMPLATE[t],
     description: `Prepare: ${TOOL_DESCRIPTIONS[t]}`,
     input_schema: obj({
@@ -478,7 +494,9 @@ function s(v: unknown): string {
 /** Rebuilds a visual spec from a show_ or prepare_ tool input. */
 export function specFromToolInput(template: TemplateId, input: Record<string, unknown>): VisualSpec {
   const { reason: _r, beat: _b, arc: _a, replace_id: _ri, tuck_ids: _t, prepared_id: _p, when: _w, ...rest } = input;
-  return { ...rest, template, title: s(input.title), aliases: strArray(input.aliases) } as unknown as VisualSpec;
+  // A drawing starts as a brief; the artist fills in its elements as it draws.
+  const drawing = template === "drawing" ? { elements: [], status: "drawing" } : {};
+  return { ...rest, ...drawing, template, title: s(input.title), aliases: strArray(input.aliases) } as unknown as VisualSpec;
 }
 
 /** Maps one tool call to a decision. Unknown tools become "none". */

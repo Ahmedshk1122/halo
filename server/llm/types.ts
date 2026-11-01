@@ -36,10 +36,23 @@ export interface LLMError {
   retryAfterSec?: number;
 }
 
+/** A plain text request whose answer is streamed (the artist draws line by line). */
+export interface TextRequest {
+  model: string;
+  effort: "low" | "medium" | "high";
+  system: { text: string; cache: boolean }[];
+  user: string;
+  maxTokens: number;
+  timeoutMs: number;
+  signal?: AbortSignal;
+}
+
 export interface LLMClient {
   readonly provider: AIProvider;
   readonly available: boolean;
   callTools(req: ToolCallRequest): Promise<ToolCallResult>;
+  /** Streams the text of the answer as it is generated. */
+  streamText?(req: TextRequest): AsyncIterable<string>;
   /** Human-readable error for the decision log, without leaking request details. */
   describeError(err: unknown): LLMError;
 }

@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import type { LLMClient, LLMError, ToolCall, ToolCallRequest, ToolCallResult } from "./types";
+import type { LLMClient, LLMError, TextRequest, ToolCall, ToolCallRequest, ToolCallResult } from "./types";
 
 // Models that reject a forced tool_choice ("any"/"tool"); they get "auto" plus
 // the prompt's "call exactly one tool" instruction instead.
@@ -40,11 +40,13 @@ type CreateFn = (body: Anthropic.Beta.MessageCreateParamsNonStreaming, opts: { t
 export class AnthropicLLM implements LLMClient {
   readonly provider = "anthropic" as const;
   private create: CreateFn | null;
+  private client: Anthropic | null;
   /** The strict level that worked, per model and tool set, so later requests (and the cache) stay the same. */
   private strictLevel = new Map<string, number>();
 
   constructor(apiKey: string, create?: CreateFn) {
     const client = apiKey ? new Anthropic({ apiKey, maxRetries: 1 }) : null;
+    this.client = client;
     this.create = create ?? (client ? (body, opts) => client.beta.messages.create(body, opts) : null);
   }
 
@@ -66,6 +68,25 @@ export class AnthropicLLM implements LLMClient {
         console.warn(`Claude: the strict tool grammar is too large; retrying with ${next} of ${req.tools.length} tools strict.`);
         this.strictLevel.set(key, i + 1);
       }
+    }
+  }
+
+  async *streamText(req: TextRequest): AsyncIterable<string> {
+    if (!this.client) throw new Error("ANTHROPIC_API_KEY is not set in .env");
+    const fallback = FALLBACK_DEFAULT.test(req.model);
+    const stream = this.client.beta.messages.stream(
+      {
+        model: req.model,
+        max_tokens: req.maxTokens,
+        system: req.system.map((b) => ({ type: "text" as const, text: b.text, ...(b.cache ? { cache_control: { type: "ephemeral" as const } } : {}) })),
+        messages: [{ role: "user", content: req.user }],
+        output_config: { effort: req.effort },
+        ...(fallback ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const } : {}),
+      },
+      { timeout: req.timeoutMs, signal: req.signal },
+    );
+    for await (const event of stream) {
+      if (event.type === "content_block_delta" && event.delta.type === "text_delta") yield event.delta.text;
     }
   }
 

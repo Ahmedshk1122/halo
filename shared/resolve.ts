@@ -3,6 +3,7 @@
 // cannot be grounded rejects the visual.
 
 import { formatDelta, formatLabel, formatValue, normalizeName, type DataColumn, type DataTable } from "./data";
+import { elementLine, parseElement, type DrawElement } from "./drawing";
 import { scanSpec, scrubNumbers, type GroundingViolation } from "./grounding";
 import { wasSaid, type SpokenNumber } from "./spoken";
 import type {
@@ -320,6 +321,20 @@ export function tidySpec(spec: VisualSpec): VisualSpec {
       };
     case "diagram":
       return tidyDiagram({ ...spec, ...base });
+    case "drawing":
+      return {
+        ...spec,
+        ...base,
+        caption: tidy(spec.caption, 60),
+        aspect: spec.aspect === "square" || spec.aspect === "tall" ? spec.aspect : "wide",
+        brief: String(spec.brief ?? "").trim().slice(0, 2000),
+        // Elements are checked again here, whatever their source: only whitelisted shapes get through.
+        elements: list<DrawElement>(spec.elements)
+          .map((e) => (e && typeof e === "object" ? parseElement(elementLine({ ...e, attrs: record(e.attrs) as Record<string, string>, text: tidy(e.text ?? "", 60) })) : null))
+          .filter((e): e is DrawElement => e !== null)
+          .slice(0, 600),
+        status: spec.status === "drawing" ? "drawing" : "done",
+      };
   }
 }
 
@@ -454,6 +469,9 @@ function checkShape(spec: VisualSpec): string[] {
       break;
     case "diagram":
       if (spec.regions.length + spec.nodes.length + spec.paths.length + spec.markers.length === 0) errors.push("diagram needs at least one part");
+      break;
+    case "drawing":
+      if (spec.status !== "drawing" && spec.elements.length === 0) errors.push("the drawing came back empty");
       break;
     default:
       break;
@@ -629,6 +647,17 @@ function resolve(spec: VisualSpec, tables: DataTable[], said: SpokenNumber[], no
         accent: direction === "flat" ? "blue" : direction === good ? "green" : "red",
       };
     }
+    case "drawing":
+      return {
+        template: "drawing",
+        title: spec.title,
+        caption: spec.caption,
+        aspect: spec.aspect,
+        elements: spec.elements,
+        pending: spec.status === "drawing" && spec.elements.length === 0,
+        live: spec.status === "drawing",
+        accent: "blue",
+      };
     case "diagram": {
       const d = resolveDiagram(spec);
       if (d.regions.length + d.nodes.length + d.paths.length + d.markers.length === 0) {

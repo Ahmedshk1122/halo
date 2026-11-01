@@ -40,8 +40,7 @@ import {
   AppWindow,
   Quote,
   Goal,
-  Shapes,
-} from "lucide-react";
+  Shapes, PenTool } from "lucide-react";
 import type { IconName, TemplateId } from "../../shared/visuals";
 
 /** Lucide at a 1.75 stroke with rounded caps matches the feel of SF Symbols. */
@@ -93,6 +92,7 @@ const TEMPLATE_ICONS: Record<TemplateId, LucideIcon> = {
   statement: Quote,
   goal: Goal,
   diagram: Shapes,
+  drawing: PenTool,
 };
 
 export function Icon({ name, size, className }: { name: IconName; size: number; className?: string }) {

@@ -104,7 +104,9 @@ describe("Claude strict tools", async () => {
     expect(strictToolNames(tools, 0).size).toBe(0);
     const half = strictToolNames(tools, 0.5);
     expect(half.has("act")).toBe(true);
-    expect(half.has("draw")).toBe(false);
+    // The largest schema is the first to lose strict mode.
+    const largest = [...tools].sort((a, b) => JSON.stringify(b.input_schema).length - JSON.stringify(a.input_schema).length)[0].name;
+    expect(half.has(largest)).toBe(false);
   });
 
   it("retries with fewer strict tools when the grammar is too large, and remembers it", async () => {
@@ -132,5 +134,40 @@ describe("Claude strict tools", async () => {
       throw Anthropic.APIError.generate(401, { type: "error", error: { type: "authentication_error", message: "invalid x-api-key" } }, undefined, new Headers());
     }) as unknown as ConstructorParameters<typeof AnthropicLLM>[1];
     await expect(new AnthropicLLM("sk-ant-test", create).callTools(req)).rejects.toBeInstanceOf(Anthropic.AuthenticationError);
+  });
+});
+
+describe("artist", async () => {
+  const { drawStream, artistUserMessage, ARTIST_SYSTEM } = await import("../server/artist/artist");
+  const req = { title: "The pitch", caption: "", brief: "A football pitch seen from above", aspect: "wide" as const, style: "float" as const, said: ["44%"], previous: [] };
+
+  it("streams from the model with the brief, the canvas and the said numbers", async () => {
+    let seen: { user: string; system: string } | null = null;
+    const llm = {
+      provider: "anthropic" as const,
+      available: true,
+      describeError: (e: unknown) => ({ status: 500, message: String(e) }),
+      callTools: async () => {
+        throw new Error("unused");
+      },
+      async *streamText(r: { user: string; system: { text: string }[] }) {
+        seen = { user: r.user, system: r.system.map((b) => b.text).join("") };
+        yield '<rect x="0" y="0" width="960" height="540" fill="green"/>\n';
+        yield '<line x1="480" y1="0" x2="480" y2="540" stroke="white"/>\n';
+      },
+    };
+    let text = "";
+    for await (const t of drawStream(llm, req, { model: "claude-sonnet-5-5", effort: "low" })) text += t;
+    expect(text.split("\n").filter(Boolean)).toHaveLength(2);
+    expect(seen!.system).toBe(ARTIST_SYSTEM);
+    expect(seen!.user).toContain("A football pitch seen from above");
+    expect(seen!.user).toContain('width="960" height="540" style="float"');
+    expect(seen!.user).toContain("44%");
+  });
+
+  it("asks to keep unchanged parts exactly as they are when updating", () => {
+    const msg = artistUserMessage({ ...req, previous: ['<rect x="0" y="0" width="960" height="540" fill="green"/>'] });
+    expect(msg).toContain("<current_drawing>");
+    expect(msg).toContain("character for character");
   });
 });

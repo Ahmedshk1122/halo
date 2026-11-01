@@ -12,6 +12,14 @@
   --green: #30d158;
   --red: #ff453a;
   --orange: #ff9f0a; /* targets and highlights only */
+  /* More system colors, for drawings of real things (a green pitch, a blue river). */
+  --yellow: #ffd60a;
+  --teal: #40cbe0;
+  --indigo: #5e5ce6;
+  --purple: #bf5af2;
+  --pink: #ff375f;
+  --brown: #ac8e68;
+  --gray: #8e8e93;
 
   /* Type scale (1080p). Nothing below 22px. */
   --type-hero: 144px;

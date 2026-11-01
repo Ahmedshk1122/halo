@@ -16,6 +16,7 @@
     "key": "node scripts/set-key.mjs",
     "model": "node scripts/set-key.mjs model",
     "use": "node scripts/set-key.mjs use",
+    "artist": "node scripts/set-key.mjs artist",
     "postinstall": "node scripts/setup-mediapipe.mjs --wasm-only"
   },
   "dependencies": {

@@ -3,6 +3,8 @@
 // loaded data and produces a ResolvedVisual, which is the only thing templates
 // ever render. Templates never see a typed number.
 
+import { drawingCues, type DrawAspect, type DrawElement } from "./drawing";
+
 export const TEMPLATE_IDS = [
   "metric",
   "line",
@@ -16,6 +18,7 @@ export const TEMPLATE_IDS = [
   "statement",
   "goal",
   "diagram",
+  "drawing",
 ] as const;
 export type TemplateId = (typeof TEMPLATE_IDS)[number];
 
@@ -32,6 +35,7 @@ export const TEMPLATE_LABELS: Record<TemplateId, string> = {
   statement: "Statement",
   goal: "From → to",
   diagram: "Diagram",
+  drawing: "Drawing",
 };
 
 /** Lucide icons the director may pick from. Kept short so the model chooses well. */
@@ -344,7 +348,22 @@ export interface DiagramSpec extends SpecBase {
   markers: DiagramMarker[];
 }
 
+/**
+ * A drawing of anything, made live by the artist model. The director writes the
+ * brief; the artist streams the elements. status "drawing" while it is being drawn.
+ */
+export interface DrawingSpec extends SpecBase {
+  template: "drawing";
+  caption: string;
+  aspect: DrawAspect;
+  /** What to draw, in the director's words: the subject, its real shape, parts to label, what to stress. */
+  brief: string;
+  elements: DrawElement[];
+  status?: "drawing" | "done";
+}
+
 export type VisualSpec =
+  | DrawingSpec
   | MetricSpec
   | LineSpec
   | BarSpec
@@ -507,7 +526,21 @@ export interface RGoal {
   accent: Accent;
 }
 
+export interface RDrawing {
+  template: "drawing";
+  title: string;
+  caption: string;
+  aspect: DrawAspect;
+  elements: DrawElement[];
+  /** Nothing drawn yet: the placeholder breathes until the first elements arrive. */
+  pending: boolean;
+  /** Elements are still streaming in (each animates as it arrives). */
+  live: boolean;
+  accent: Accent;
+}
+
 export type ResolvedVisual =
+  | RDrawing
   | RMetric
   | RLine
   | RBar
@@ -556,6 +589,8 @@ export function revealCount(v: ResolvedVisual): number {
       return v.reveal === "progressive" ? v.steps.length : 0;
     case "diagram":
       return v.reveal === "progressive" ? diagramCues(v).length : 0;
+    case "drawing":
+      return drawingCues(v.elements).length;
     default:
       return 0;
   }
@@ -572,6 +607,8 @@ export function revealCues(v: ResolvedVisual): string[] {
       return v.steps.map((p) => p.cue);
     case "diagram":
       return diagramCues(v);
+    case "drawing":
+      return drawingCues(v.elements);
     default:
       return [];
   }

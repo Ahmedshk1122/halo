@@ -2,6 +2,7 @@
 // Sizes are deterministic so the control window can place visuals without
 // measuring the DOM. Templates are designed to fill exactly this box.
 
+import { CANVAS } from "./drawing";
 import type { ResolvedVisual } from "./visuals";
 
 export type Slot = "left" | "right" | "lower";
@@ -130,6 +131,10 @@ export function templateSize(v: ResolvedVisual): Size {
       return { w: 720, h: 620 + (v.caption ? 31 : 0) };
     case "goal":
       return { w: 560, h: 560 };
+    case "drawing": {
+      const c = CANVAS[v.aspect];
+      return { w: c.w + PAD * 2, h: c.h + PAD * 2 + TITLE_LINE + 16 + (v.caption ? 31 : 0) };
+    }
     case "diagram":
       return v.aspect === "wide" ? { w: 900, h: 520 } : v.aspect === "tall" ? { w: 600, h: 800 } : { w: 680, h: 660 };
     case "statement": {

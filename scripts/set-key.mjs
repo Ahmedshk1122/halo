@@ -7,6 +7,8 @@
 //   npm run key gemini gemini-flash-latest       same, and pick the model
 //   npm run model gemini-flash-latest            change the model for the current provider
 //   npm run use gemini                           switch provider, using the key already in .env
+//   npm run artist gemini | claude               which provider draws the drawings
+//   npm run artist claude-opus-5-5               which model draws them
 import { chmodSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -136,6 +138,39 @@ if (command === "use") {
   writeEnv(setVar(kept.join("\n"), "HALO_PROVIDER", target.id));
   if (kept.length < lines.length) console.log("Removed the old Kimi settings and key from .env.");
   console.log(`Halo now uses ${target.label}.`);
+  console.log(restart);
+  process.exit(0);
+}
+
+if (command === "artist") {
+  const text = readEnv();
+  const arg = (rest[0] ?? "").trim();
+  const DEFAULT_ARTIST = { anthropic: "claude-sonnet-5-5", gemini: "gemini-flash-latest" };
+  const modelVar = { anthropic: "HALO_ARTIST_MODEL", gemini: "GEMINI_ARTIST_MODEL" };
+  const current = (pick(getVar(text, "HALO_ARTIST_PROVIDER").toLowerCase()) ?? pick(getVar(text, "HALO_PROVIDER").toLowerCase()) ?? PROVIDERS.gemini).id;
+  if (!arg) {
+    console.log(`Drawings: ${current === "gemini" ? "Gemini" : "Claude"}, ${getVar(text, modelVar[current]) || DEFAULT_ARTIST[current]}`);
+    console.log("Change with: npm run artist gemini, npm run artist claude, or a model name like claude-opus-5-5");
+    process.exit(0);
+  }
+  let prov;
+  let model = "";
+  if (/^claude-/i.test(arg)) [prov, model] = ["anthropic", arg];
+  else if (/^gemini-/i.test(arg)) [prov, model] = ["gemini", arg];
+  else prov = pick(arg.toLowerCase())?.id;
+  if (!prov) {
+    console.error("Use: npm run artist gemini, npm run artist claude, or a model name like claude-opus-5-5");
+    process.exit(1);
+  }
+  const keyVar = prov === "gemini" ? "GEMINI_API_KEY" : "ANTHROPIC_API_KEY";
+  if (!getVar(text, keyVar)) {
+    console.error(`There is no ${prov === "gemini" ? "Gemini" : "Claude"} key in .env yet. Add one with: npm run key ${prov === "gemini" ? "gemini" : "claude"}`);
+    process.exit(1);
+  }
+  let next = setVar(text, "HALO_ARTIST_PROVIDER", prov);
+  if (model) next = setVar(next, modelVar[prov], model);
+  writeEnv(next);
+  console.log(`Drawings now come from ${prov === "gemini" ? "Gemini" : "Claude"}, ${model || getVar(next, modelVar[prov]) || DEFAULT_ARTIST[prov]}.`);
   console.log(restart);
   process.exit(0);
 }

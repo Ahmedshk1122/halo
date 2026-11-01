@@ -664,3 +664,30 @@
   stroke-width: 6px;
   stroke-linejoin: round;
 }
+
+/* Drawing: made live by the artist model */
+.tpl-drawing-canvas {
+  position: relative;
+  margin-top: 16px;
+}
+.tpl-drawing-svg {
+  display: block;
+  overflow: visible;
+  font-family: var(--font-system);
+}
+.tpl-drawing-pending {
+  position: absolute;
+  inset: 0;
+  border-radius: 20px;
+  background: linear-gradient(110deg, transparent 25%, var(--fill) 50%, transparent 75%);
+  background-size: 220% 100%;
+  animation: halo-drawing-shimmer 1.8s ease-in-out infinite;
+}
+.tpl-drawing-pending.is-still {
+  animation: none;
+  background: var(--fill-2);
+}
+@keyframes halo-drawing-shimmer {
+  from { background-position: 120% 0; }
+  to { background-position: -120% 0; }
+}
