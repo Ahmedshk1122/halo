@@ -103,10 +103,52 @@ function outcomeTone(d: DecisionEntry): "good" | "warn" | "bad" | "neutral" | "a
   return "accent";
 }
 
+/** The decision log as plain text, oldest first, for pasting into a bug report. No keys or settings. */
+export function logText(entries: DecisionEntry[]): string {
+  return entries
+    .map((d) => {
+      const parts = [
+        clock(d.at),
+        d.source === "command" ? "voice command" : d.trigger,
+        `${d.action}/${d.outcome}`,
+        d.template ? `${d.template} "${d.title ?? ""}"` : "",
+        d.requestMs !== undefined ? `director ${d.requestMs} ms` : "",
+        d.onScreenMs !== undefined ? `on screen ${d.onScreenMs} ms` : "",
+        d.model ?? "",
+      ].filter(Boolean);
+      const lines = [parts.join(" · ")];
+      if (d.said) lines.push(`  said: ${d.said}`);
+      if (d.reason) lines.push(`  reason: ${d.reason}`);
+      for (const e of d.errors ?? []) lines.push(`  error: ${e}`);
+      for (const n of d.notes ?? []) lines.push(`  note: ${n}`);
+      return lines.join("\n");
+    })
+    .join("\n");
+}
+
+async function copyText(text: string) {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    const area = document.createElement("textarea");
+    area.value = text;
+    document.body.appendChild(area);
+    area.select();
+    document.execCommand("copy");
+    area.remove();
+  }
+}
+
 function DecisionsView() {
   const decisions = useStore(store, (s) => s.decisions);
   const inFlight = useStore(store, (s) => s.director.inFlight);
   const [filter, setFilter] = useState<"all" | "changes">("all");
+  const [copied, setCopied] = useState(false);
+  const copyLog = async (entries: DecisionEntry[]) => {
+    await copyText(logText(entries));
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1500);
+  };
   const shown = decisions.filter((d) => filter === "all" || (d.action !== "none" && d.outcome !== "none")).slice().reverse();
   return (
     <div className="decisions">
@@ -121,6 +163,9 @@ function DecisionsView() {
           ]}
         />
         {inFlight && <span className="muted">Thinking…</span>}
+        <button type="button" className="btn btn-default decisions-copy" onClick={() => void copyLog(decisions)} disabled={decisions.length === 0}>
+          {copied ? "Copied" : "Copy log"}
+        </button>
       </div>
       {shown.length === 0 && <Empty title="No decisions yet">Halo logs every decision here, with its reason and latency.</Empty>}
       {shown.map((d) =>
@@ -146,6 +191,11 @@ function DecisionsView() {
           {d.errors?.map((e) => (
             <p key={e} className="decision-error">
               {e}
+            </p>
+          ))}
+          {d.notes?.map((n) => (
+            <p key={n} className="decision-note">
+              {n}
             </p>
           ))}
           <footer className="decision-meta">

@@ -1,21 +1,22 @@
 # Halo
 
-Halo puts live visuals on the presenter's camera feed during video calls. It listens, follows the arc of the talk, and decides on its own when a visual would close a gap in understanding: metric cards, charts, strategy cards, roadmaps, rough UI sketches. Often the right answer is to show nothing. It should feel like a slide deck building itself as the presenter speaks.
+Halo draws live visuals onto a person's camera video while they talk: a meeting, a lesson, a product demo, a video for social media, any explanation of anything. Whatever they talk about or ask for, real or imagined, on Earth or in space, Halo makes it visible as they speak and keeps building it as they add to it: drawings composed from scratch, lists, steps, timelines, charts, sketches. The visuals are things to point at, grab, move and throw away. Halo is the best assistant a speaker could have for getting an idea across. It is not a business-metrics tool; numbers and charts are just one of the things it can show.
 
 This repo is the web prototype: a Vite + React + TypeScript app plus a tiny local Node server. Chrome renders a clean `/stage` window, OBS captures it, and OBS Virtual Camera feeds Zoom/Teams/Meet. A native macOS camera extension comes later.
 
 ## Product rules (never break these)
 
-- **The presenter leads; Halo assists.** Halo helps them land their points and never gets in their way. When they ask for something, do it; never refuse because it isn't in their data.
+- **The speaker leads; Halo assists.** Halo helps them get their idea across and never gets in their way. When they ask for something ("draw ...", "show ..."), do it, whatever it is; never refuse because it isn't in their data. No built-in bias toward any topic or kind of talk.
 - **Proactive by default, with judgment.** The director decides when to show something, and when not to, like an assistant who knows the talk. Voice commands ("Halo, show X", "Halo, back", "let's go back to the funnel", "take that away", "Halo, clear") are the secondary way to steer.
 - **No captions, ever.** Never put a transcript, captions or the presenter's spoken words on the video. The transcript is visible only in the control window.
 - **Numbers come from the presenter, never from the AI.** A number reaches the screen because the presenter said it (or wrote it in their talk notes), or because it's in data they loaded (CSV/XLSX). Loaded data is there to pull up figures they ask about or mention.
   - Templates that show numbers take references, never typed numbers: a data reference (table, column, row or filter) or a said value (`pick: "said"` / table `"said"`), which is checked against what the presenter actually said (`shared/spoken.ts`).
   - If any reference fails to resolve or a said value wasn't said, drop the visual and log it.
-  - Scan every generated text field before rendering. Month, quarter and year names, small item counts ("three steps") and numbers the presenter said are fine. Any other number, percentage or currency rejects the visual.
+  - Scan every generated text field before rendering. Month, quarter and year names, small item counts ("three steps") and numbers the presenter said are fine. Any other number, percentage or currency is removed from the text (and logged); the visual still shows.
   - The AI never invents, estimates or computes a number; Halo computes changes and percentages itself.
-- **Restraint.** Show a visual for a number, comparison, sequence, structure, plan or "picture this" moment that would be hard to hold in memory. Show nothing for greetings, small talk, anecdotes, stories, emotional moments, or anything already clear.
-- **At most two visuals on screen.** At least ~6 seconds between new visuals unless the presenter asks. Tuck visuals away when the beat moves on. Tucked visuals become chips along the top edge so they can be recalled.
+- **Judgment, not rules.** Show a visual whenever seeing it helps: something to picture, a place, an object, how something works, a list, a sequence, a comparison, numbers, a moment in a story. Show nothing for greetings, thanks and filler. Don't add rules that hold the model back; give it the context (including what is on screen) and let it decide.
+- **At most two visuals on screen.** Show a visual as soon as it helps; no holding visuals back to space them out (only the quiet setting leaves a gap). Tuck visuals away when the beat moves on. Tucked visuals become chips along the top edge so they can be recalled.
+- **No caps on what the presenter says.** Ten reasons means ten items: lists, steps and timelines take every item, and the templates fit them (compact rows, columns, wrapped rows). Visuals follow the presenter: on-screen visuals are updated in place as they add to them.
 - **The face is a keep-out zone.** Visuals never cover it, whether placed automatically or by hand.
 - **The stage is clean.** `/stage` shows only the webcam and Halo's visuals: no UI chrome, cursors, or text outside visuals. It is never mirrored. The control preview is mirrored (video and visual positions flip, text stays readable).
 - **The API key never reaches the browser** and is never committed. It lives in `.env`, read only by the server.
@@ -67,10 +68,10 @@ Every visual on the video should feel like Apple Keynote or visionOS made it: ca
 
 ## How the pieces fit
 
-- **Director loop** (`src/control/director/director.ts`): triggers on each final speech segment and when the interim transcript grows ~12 words without a final. One request in flight; later speech merges into the next request. Each request carries the running arc summary, the last ~60 s of transcript (new lines marked), what is on stage, chips and history, the data catalog, and prepared visuals.
-- **Decisions** are `none | show | update | tuck | recall | clear` with a reason (control window only), a beat name and an updated arc. Claude answers with exactly one strict tool call (`shared/director.ts`): one `show_*` tool per template (`replace_id` makes it an update), `show_prepared`, and `act`.
+- **Director loop** (`src/control/director/director.ts`): triggers on each final speech segment and when the interim transcript grows ~6 words without a final. One request in flight; later speech merges into the next request. Each request carries the running arc summary, the last ~60 s of transcript (new lines marked), what is on stage, chips and history, the data catalog, and prepared visuals.
+- **Decisions** are `none | show | update | tuck | recall | clear` with a reason (control window only), a beat name and an updated arc. Claude answers with exactly one tool call (`shared/director.ts`): one tool per template, `draw` first (the diagram template, the main tool), then `show_list`, `show_steps`, charts and the rest (`replace_id` makes it an update), plus `show_prepared` and `act`. Every visual has a `style`: `card` (glass) or `float` (straight on the video); Settings → Behind visuals can force either.
 - **Grounding** (`shared/resolve.ts`, `shared/grounding.ts`): every visual goes through `prepareVisual` (tidy copy → shape check → text scan → resolve references) before it reaches the stage. Templates render only `ResolvedVisual`.
-- **Pacing in code, not just the prompt:** at most two on stage (oldest tucked), spacing between new visuals by proactivity (quiet 10 s, balanced 6 s, eager 4 s) unless the presenter asked, no duplicates (recall instead).
+- **Pacing in code, not just the prompt:** at most two on stage (oldest tucked); only quiet spaces new visuals (8 s). A show that matches a visual on screen or tucked (same template, same or contained title) updates it in place instead of being dropped. The director sees each on-screen visual's content (`specContent`) so it can extend it.
 - **Reveal** (`shared/reveal.ts`): list items appear when their cue words are spoken. The director builds lists item by item with `replace_id` as they are said; prepared visuals reveal on cues with a pacing fallback.
 - **Voice commands** (`src/control/director/commands.ts`) are handled locally for speed; anything unresolved becomes an explicit director request.
 - **Notes planning** (`server/planner/planner.ts`): one pass with `prepare_*` tools; every prepared visual is grounded before use.

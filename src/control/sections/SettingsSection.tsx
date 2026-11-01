@@ -7,6 +7,7 @@ import { Group, Row, Segmented, Switch } from "../ui/controls";
 
 export function SettingsSection() {
   const glass = useStore(store, (s) => s.glass);
+  const backing = useStore(store, (s) => s.backing);
   const reducedMotion = useStore(store, (s) => s.reducedMotion);
   const cameraDeviceId = useStore(store, (s) => s.cameraDeviceId);
   const provider = useStore(store, (s) => s.director.provider);
@@ -25,7 +26,7 @@ export function SettingsSection() {
         title="Director"
         footer={`Replay plays back recorded decisions for the sample rehearsal script, so the pipeline can be tested without a key or network. Use ${ai} for real talks.`}
       >
-        <Row label="How proactive Halo is" detail="Quiet waits for the strongest moments; eager shows more. Also sets the gap between visuals.">
+        <Row label="How proactive Halo is" detail="Quiet waits for the strongest moments and spaces visuals out; balanced and eager show them as soon as they help.">
           <Segmented
             value={proactivity}
             onChange={(p) => store.set((s) => ({ director: { ...s.director, proactivity: p } }))}
@@ -85,6 +86,17 @@ export function SettingsSection() {
             options={[
               { value: "light", label: "Light" },
               { value: "dark", label: "Dark" },
+            ]}
+          />
+        </Row>
+        <Row label="Behind visuals" detail="Auto lets Halo choose: drawings float on the video, text-heavy visuals sit on glass.">
+          <Segmented
+            value={backing}
+            onChange={(b) => store.set({ backing: b })}
+            options={[
+              { value: "auto", label: "Auto" },
+              { value: "card", label: "Glass" },
+              { value: "float", label: "Nothing" },
             ]}
           />
         </Row>

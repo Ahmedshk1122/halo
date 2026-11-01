@@ -176,8 +176,9 @@ export function updateVisual(id: string, visual: ResolvedVisual, spec: VisualSpe
   const v = state.visuals[id];
   if (!v) return;
   const size = templateSize(visual);
-  // A visual the presenter placed or grew by hand keeps its size when its content updates.
-  const sameSize = (size.w === v.frame.w && size.h === v.frame.h) || (v.userPlaced && v.visual.template === visual.template);
+  // A goal card grown by hand keeps its size; anything else takes the size its new content needs
+  // (a list that gains items grows), staying where the presenter put it.
+  const sameSize = (size.w === v.frame.w && size.h === v.frame.h) || (v.userPlaced && visual.template === "goal" && v.visual.template === "goal");
   store.set((s) => ({
     visuals: patchVisual(s, id, { visual, spec, title: visual.title, frame: sameSize ? v.frame : { ...v.frame, ...size } }),
   }));

@@ -3,7 +3,7 @@
   "fixtures": [
     {
       "when": "activation went from",
-      "tool": "show_metric",
+      "tool": "show_number",
       "input": {
         "reason": "A headline number from the data: show the KPI and its change.",
         "beat": "Activation headline",
@@ -83,7 +83,7 @@
     },
     {
       "when": "first, templates",
-      "tool": "show_strategy",
+      "tool": "show_list",
       "input": {
         "reason": "The first of three announced moves was just said.",
         "beat": "Three moves",
@@ -109,7 +109,7 @@
     },
     {
       "when": "second, imports",
-      "tool": "show_strategy",
+      "tool": "show_list",
       "input": {
         "reason": "Second move said: add it to the card.",
         "beat": "Three moves",
@@ -141,7 +141,7 @@
     },
     {
       "when": "third, invites",
-      "tool": "show_strategy",
+      "tool": "show_list",
       "input": {
         "reason": "Third move said: the card is complete.",
         "beat": "Three moves",
@@ -224,7 +224,7 @@
     },
     {
       "when": "templates ship in november",
-      "tool": "show_roadmap",
+      "tool": "show_timeline",
       "input": {
         "reason": "A dated plan begins: start the roadmap and clear the previous beat.",
         "beat": "Rollout",
@@ -253,7 +253,7 @@
     },
     {
       "when": "imports follow in december",
-      "tool": "show_roadmap",
+      "tool": "show_timeline",
       "input": {
         "reason": "Second milestone said.",
         "beat": "Rollout",
@@ -285,7 +285,7 @@
     },
     {
       "when": "january",
-      "tool": "show_roadmap",
+      "tool": "show_timeline",
       "input": {
         "reason": "Third milestone said.",
         "beat": "Rollout",

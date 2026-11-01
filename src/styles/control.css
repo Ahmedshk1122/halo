@@ -659,6 +659,20 @@ body.is-control {
   font-size: 11px;
   color: var(--ctl-red);
 }
+.decision-note {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: var(--ctl-label-2);
+}
+.decisions-copy {
+  margin-left: auto;
+  height: 22px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+.decisions-head {
+  gap: 8px;
+}
 .decision-meta {
   display: flex;
   flex-wrap: wrap;

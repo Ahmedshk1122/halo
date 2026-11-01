@@ -57,9 +57,29 @@ describe("prepareVisual", () => {
     expect(r.ok && r.visual.template === "metric" && r.visual.value.display).toBe("36.2%");
   });
 
-  it("rejects typed numbers in text fields", () => {
+  it("takes typed numbers out of text fields and still shows the visual", () => {
     const r = prepareVisual({ ...metric, title: "Activation hit 44%" }, catalog);
-    expect(r).toMatchObject({ ok: false, stage: "grounding" });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.visual.title).toBe("Activation hit");
+    expect(r.notes.join(" ")).toContain("44");
+  });
+
+  it("keeps a number the presenter said in the text", async () => {
+    const { spokenNumbers } = await import("../shared/spoken");
+    const r = prepareVisual({ ...metric, title: "Activation hit 44%" }, catalog, { said: spokenNumbers("we hit 44% this week") });
+    expect(r.ok && r.visual.title).toBe("Activation hit 44%");
+  });
+
+  it("keeps every item of a long list", () => {
+    const points = Array.from({ length: 10 }, (_, i) => ({ icon: "sparkles" as const, text: `Reason ${["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"][i]}`, detail: "", cue: "" }));
+    const r = prepareVisual({ template: "strategy", title: "Ten reasons", aliases: [], reveal: "all", points }, catalog);
+    expect(r.ok && r.visual.template === "strategy" && r.visual.points.length).toBe(10);
+  });
+
+  it("fills in fields a tool left out instead of dropping the visual", () => {
+    const r = prepareVisual({ template: "strategy", title: "Why it matters", points: [{ text: "Speed" }, { text: "Trust" }] } as never, catalog);
+    expect(r.ok && r.visual.template === "strategy" && r.visual.points.map((p) => p.text)).toEqual(["Speed", "Trust"]);
   });
 
   it("tidies copy: no exclamation marks or emoji", () => {

@@ -28,6 +28,7 @@ export function deriveStageState(s: ControlState): StageState {
         reveal: v.reveal,
         target: v.target,
         dragging: v.dragging,
+        float: s.backing === "float" || (s.backing === "auto" && v.spec?.style === "float"),
       })),
     chips: s.chips
       .map((id) => s.visuals[id])
@@ -62,6 +63,7 @@ export function startStageSync() {
       next.onStage !== prev.onStage ||
       next.chips !== prev.chips ||
       next.glass !== prev.glass ||
+      next.backing !== prev.backing ||
       next.keepOut !== prev.keepOut ||
       next.cameraDeviceId !== prev.cameraDeviceId ||
       next.reducedMotion !== prev.reducedMotion;

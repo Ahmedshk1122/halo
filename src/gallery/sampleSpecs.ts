@@ -29,6 +29,52 @@ export const SAMPLE_SPECS: { name: string; spec: VisualSpec; reveal?: number; sa
     },
   },
   {
+    name: "Line chart: two metrics",
+    said: "In Delhi it's 15 degrees in January, 31 in April, 39 in June and 25 in November. Rain goes from 20 to 10, then 80, then 5.",
+    spec: {
+      template: "line",
+      title: "Delhi through the year",
+      subtitle: "Temperature and rain",
+      aliases: ["weather"],
+      series_name: "Temperature",
+      series: {
+        table: "said",
+        x: "",
+        y: "",
+        filter_column: "",
+        filter_value: "",
+        said_points: [
+          { label: "January", value: 15 },
+          { label: "April", value: 31 },
+          { label: "June", value: 39 },
+          { label: "November", value: 25 },
+        ],
+        said_unit: "number",
+        said_currency: "",
+      },
+      more_series: [
+        {
+          name: "Rain",
+          series: {
+            table: "said",
+            x: "",
+            y: "",
+            filter_column: "",
+            filter_value: "",
+            said_points: [
+              { label: "January", value: 20 },
+              { label: "April", value: 10 },
+              { label: "June", value: 80 },
+              { label: "November", value: 5 },
+            ],
+            said_unit: "number",
+            said_currency: "",
+          },
+        },
+      ],
+    },
+  },
+  {
     name: "Bar chart",
     spec: {
       template: "bar",
@@ -169,6 +215,7 @@ export const SAMPLE_SPECS: { name: string; spec: VisualSpec; reveal?: number; sa
     spec: {
       template: "diagram",
       title: "Where it acts",
+      style: "float",
       caption: "",
       aliases: ["body"],
       aspect: "square",
@@ -217,6 +264,7 @@ export const SAMPLE_SPECS: { name: string; spec: VisualSpec; reveal?: number; sa
     spec: {
       template: "diagram",
       title: "The move into turn three",
+      style: "float",
       caption: "Late braking on the inside",
       aliases: ["overtake", "race"],
       aspect: "wide",
@@ -246,6 +294,50 @@ export const SAMPLE_SPECS: { name: string; spec: VisualSpec; reveal?: number; sa
         { id: "h", label: "Hamilton", x: 76, y: 44, kind: "car", tone: "accent", cue: "" },
         { id: "r", label: "Rival", x: 81, y: 49, kind: "car", tone: "muted", cue: "" },
       ],
+    },
+  },
+  {
+    name: "Drawing: inner planets",
+    spec: {
+      template: "diagram",
+      title: "The inner planets",
+      caption: "",
+      aliases: ["planets", "solar system"],
+      style: "float",
+      aspect: "wide",
+      reveal: "all",
+      regions: [
+        { label: "", x: 2, y: 30, w: 16, h: 40, shape: "ellipse", tone: "highlight", cue: "" },
+        { label: "", x: 28, y: 44, w: 4, h: 12, shape: "ellipse", tone: "muted", cue: "" },
+        { label: "", x: 44, y: 41, w: 7, h: 18, shape: "ellipse", tone: "neutral", cue: "" },
+        { label: "", x: 62, y: 40, w: 8, h: 20, shape: "ellipse", tone: "accent", cue: "" },
+        { label: "", x: 82, y: 43, w: 5, h: 14, shape: "ellipse", tone: "highlight", cue: "" },
+      ],
+      nodes: [
+        { id: "sun", label: "Sun", detail: "", x: 10, y: 82, w: 0, h: 0, shape: "none", tone: "neutral", icon: "none", cue: "" },
+        { id: "mercury", label: "Mercury", detail: "", x: 30, y: 70, w: 0, h: 0, shape: "none", tone: "neutral", icon: "none", cue: "" },
+        { id: "venus", label: "Venus", detail: "", x: 47, y: 70, w: 0, h: 0, shape: "none", tone: "neutral", icon: "none", cue: "" },
+        { id: "earth", label: "Earth", detail: "", x: 66, y: 70, w: 0, h: 0, shape: "none", tone: "neutral", icon: "none", cue: "" },
+        { id: "mars", label: "Mars", detail: "", x: 84, y: 70, w: 0, h: 0, shape: "none", tone: "neutral", icon: "none", cue: "" },
+      ],
+      links: [],
+      paths: [{ id: "orbit", label: "", points: [{ x: 18, y: 50 }, { x: 96, y: 50 }], closed: false, filled: false, weight: "thin", arrow: false, tone: "muted", cue: "" }],
+      markers: [],
+    },
+  },
+  {
+    name: "List: ten reasons",
+    spec: {
+      template: "strategy",
+      title: "Why people love the city",
+      aliases: ["reasons"],
+      reveal: "all",
+      points: ["Street food", "Old forts", "Markets", "Metro", "Gardens", "Music", "Festivals", "Bookshops", "Cafes", "People"].map((text) => ({
+        icon: "sparkles" as const,
+        text,
+        detail: "",
+        cue: "",
+      })),
     },
   },
   {

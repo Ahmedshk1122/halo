@@ -43,7 +43,7 @@ export const config = {
   directorEffort: effort(env("HALO_DIRECTOR_EFFORT"), "low"),
   plannerEffort: effort(env("HALO_PLANNER_EFFORT"), "medium"),
   /** How long one director decision may take before Halo gives up on it. */
-  directorTimeoutMs: Number(env("HALO_DIRECTOR_TIMEOUT_MS") || 9000),
+  directorTimeoutMs: Number(env("HALO_DIRECTOR_TIMEOUT_MS") || 12_000),
 };
 
 export const active = config[provider];

@@ -69,3 +69,28 @@ export function labelIndices(n: number, max = 4): number[] {
   for (let k = 1; k <= inner; k++) out.add(Math.round((k * (n - 1)) / (inner + 1)));
   return [...out].sort((a, b) => a - b);
 }
+
+/**
+ * Axis labels that fit: starts from labelIndices and drops labels whose text
+ * would run into a neighbor (first and last are kept), for 22px axis text.
+ */
+export function fittingLabels(labels: string[], xAt: (i: number) => number, max = 4, fontSize = 22, gap = 10): number[] {
+  const n = labels.length;
+  const width = (i: number) => labels[i].length * fontSize * 0.55;
+  const span = (i: number) => {
+    const x = xAt(i);
+    const w = width(i);
+    return i === 0 ? [x, x + w] : i === n - 1 ? [x - w, x] : [x - w / 2, x + w / 2];
+  };
+  const kept: number[] = [];
+  for (const i of labelIndices(n, max)) {
+    const [a] = span(i);
+    while (kept.length && span(kept[kept.length - 1])[1] + gap > a) {
+      // The last label always stays; otherwise drop the newcomer.
+      if (i === n - 1 && kept.length > 1) kept.pop();
+      else break;
+    }
+    if (!kept.length || span(kept[kept.length - 1])[1] + gap <= a) kept.push(i);
+  }
+  return kept;
+}

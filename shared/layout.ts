@@ -46,6 +46,24 @@ export function diagramArea(v: { aspect: "wide" | "square" | "tall"; caption: st
 export const TITLE_LINE = 46; // 40px title line height
 export const BODY_LINE = 35; // 28px body line height
 
+/**
+ * Long lists still fit: past five points the strategy card goes compact (smaller
+ * icons, no detail lines), past ten it uses two columns.
+ */
+export function strategyLayout(n: number): { compact: boolean; columns: 1 | 2; rows: number } {
+  const columns = n > 10 ? 2 : 1;
+  return { compact: n > 5, columns, rows: Math.ceil(n / columns) };
+}
+
+/** Steps and milestones wrap onto more rows instead of running off the stage. */
+export function rowsOf<T>(items: T[], perRow: number): T[][] {
+  const rows: T[][] = [];
+  for (let i = 0; i < items.length; i += perRow) rows.push(items.slice(i, i + perRow));
+  return rows.length ? rows : [[]];
+}
+export const PROCESS_PER_ROW = (n: number) => (n <= 5 ? Math.max(1, n) : 4);
+export const ROADMAP_PER_ROW = (n: number) => (n <= 6 ? Math.max(1, n) : 5);
+
 export function templateSize(v: ResolvedVisual): Size {
   switch (v.template) {
     case "metric":
@@ -62,34 +80,50 @@ export function templateSize(v: ResolvedVisual): Size {
       return { w: 1120, h: 14 + 22 + TITLE_LINE + 18 + 26 + BODY_LINE + (hasValue ? 8 + 96 + 6 : 0) + 18 + rows * 44 - 9 + 26 + 14 };
     }
     case "strategy": {
-      const textW = 600 - PAD * 2 - 64 - 22;
-      let h = PAD + TITLE_LINE + 26;
-      for (const p of v.points) {
+      const { compact, columns, rows } = strategyLayout(v.points.length);
+      const w = columns === 2 ? 1080 : 600;
+      const colW = columns === 2 ? (w - PAD * 2 - 32) / 2 : w - PAD * 2;
+      const tile = compact ? 48 : 64;
+      const gap = compact ? 14 : 22;
+      const textW = colW - tile - (compact ? 16 : 22);
+      const rowH = v.points.map((p) => {
         const lines = estimateLines(p.text, 28, textW);
-        const detailLines = p.detail ? estimateLines(p.detail, 24, textW) : 0;
-        h += Math.max(64, lines * BODY_LINE + detailLines * 30 + 4) + 22;
-      }
-      return { w: 600, h: h - 22 + PAD };
+        const detailLines = !compact && p.detail ? estimateLines(p.detail, 24, textW) : 0;
+        return Math.max(tile, lines * BODY_LINE + detailLines * 30 + 4);
+      });
+      // Two columns fill top to bottom, then the second column; the taller column sets the height.
+      const colHeights = Array.from({ length: columns }, (_, c) => rowH.slice(c * rows, (c + 1) * rows).reduce((a, b) => a + b + gap, 0));
+      return { w, h: PAD + TITLE_LINE + 26 + Math.max(0, ...colHeights) - gap + PAD };
     }
     case "roadmap": {
-      const n = Math.max(1, v.items.length);
+      const perRow = ROADMAP_PER_ROW(v.items.length);
+      const n = Math.max(1, perRow);
       const col = n <= 3 ? 340 : n === 4 ? 300 : 250;
       const textW = col - 24;
-      const labelLines = Math.max(1, ...v.items.map((i) => estimateLines(i.label, 28, textW)));
-      const detailLines = Math.max(0, ...v.items.map((i) => (i.detail ? estimateLines(i.detail, 24, textW) : 0)));
+      const tracks = rowsOf(v.items, perRow);
+      const trackH = tracks.map((t) => {
+        const labelLines = Math.max(1, ...t.map((i) => estimateLines(i.label, 28, textW)));
+        const detailLines = Math.max(0, ...t.map((i) => (i.detail ? estimateLines(i.detail, 24, textW) : 0)));
+        return 4 + 30 + 12 + 22 + 18 + labelLines * BODY_LINE + detailLines * 30;
+      });
       return {
         w: PAD * 2 + Math.max(2, n) * col,
-        h: PAD * 2 + TITLE_LINE + 20 + 4 + 30 + 12 + 22 + 18 + labelLines * BODY_LINE + detailLines * 30,
+        h: PAD * 2 + TITLE_LINE + 20 + trackH.reduce((a, b) => a + b, 0) + (tracks.length - 1) * 28,
       };
     }
     case "process": {
-      const n = Math.max(1, v.steps.length);
+      const perRow = PROCESS_PER_ROW(v.steps.length);
+      const n = Math.max(1, perRow);
       const inner = 260 - 48;
-      const labelLines = Math.max(1, ...v.steps.map((s) => estimateLines(s.label, 28, inner)));
-      const detailLines = Math.max(0, ...v.steps.map((s) => (s.detail ? estimateLines(s.detail, 24, inner) : 0)));
+      const rows = rowsOf(v.steps, perRow);
+      const rowH = rows.map((r) => {
+        const labelLines = Math.max(1, ...r.map((s) => estimateLines(s.label, 28, inner)));
+        const detailLines = Math.max(0, ...r.map((s) => (s.detail ? estimateLines(s.detail, 24, inner) : 0)));
+        return 24 + 56 + 12 + labelLines * BODY_LINE + detailLines * 30 + 4 + 24;
+      });
       return {
         w: PAD * 2 + Math.max(2, n) * 260 + (Math.max(2, n) - 1) * 48,
-        h: PAD * 2 + TITLE_LINE + 20 + 24 + 56 + 12 + labelLines * BODY_LINE + detailLines * 30 + 4 + 24,
+        h: PAD * 2 + TITLE_LINE + 20 + rowH.reduce((a, b) => a + b, 0) + (rows.length - 1) * 20,
       };
     }
     case "ui_sketch":

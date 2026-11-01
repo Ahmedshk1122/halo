@@ -87,6 +87,32 @@
 }
 
 /* Accent: one per visual. Set data-accent on the card. */
+/* Float: drawn straight onto the video with no card. Light-on-dark colors and a soft
+   shadow keep text and lines legible over any picture. */
+.halo-glass[data-backing="float"] {
+  background: transparent;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  border-color: transparent;
+  box-shadow: none;
+  overflow: visible;
+  --fill: rgba(255, 255, 255, 0.34);
+  --fill-2: rgba(255, 255, 255, 0.22);
+  --shape-edge: rgba(255, 255, 255, 0.85);
+  --track: rgba(255, 255, 255, 0.78);
+  --grid: rgba(255, 255, 255, 0.3);
+  --separator: rgba(255, 255, 255, 0.3);
+  --label-2: rgba(255, 255, 255, 0.86);
+  --label-3: rgba(255, 255, 255, 0.66);
+  --glass-bg-solid: rgba(24, 24, 26, 0.92);
+  text-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.7),
+    0 0 18px rgba(0, 0, 0, 0.55);
+}
+.halo-glass[data-backing="float"] svg {
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6)) drop-shadow(0 0 12px rgba(0, 0, 0, 0.4));
+}
+
 .halo-glass[data-accent="blue"] { --accent: var(--blue); --accent-text: var(--blue-text); }
 .halo-glass[data-accent="green"] { --accent: var(--green); --accent-text: var(--green-text); }
 .halo-glass[data-accent="red"] { --accent: var(--red); --accent-text: var(--red-text); }

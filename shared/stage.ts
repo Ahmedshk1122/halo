@@ -21,6 +21,8 @@ export interface StageVisual {
   target: string | null;
   /** True while the presenter is dragging it (no spring lag on position). */
   dragging: boolean;
+  /** Drawn straight onto the video with no glass card behind it. */
+  float?: boolean;
 }
 
 export interface StageChip {

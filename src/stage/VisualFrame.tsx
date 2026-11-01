@@ -76,7 +76,8 @@ export function VisualFrame({ sv, glass, mirror, enterFrom, onRendered, onPointe
     >
       <motion.div
         className="halo-glass visual-glass"
-        data-glass={glass}
+        data-glass={sv.float ? "dark" : glass}
+        data-backing={sv.float ? "float" : "card"}
         data-accent={sv.visual.accent}
         data-template={sv.visual.template}
         initial={{ opacity: enterFrom ? 0.4 : ENTER_FROM.opacity }}

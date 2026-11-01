@@ -69,6 +69,7 @@ describe("diagram", () => {
 
   it("keeps made-up numbers out of labels", () => {
     const r = prepareVisual({ ...base, nodes: [{ id: "a", label: "Grew 40%", detail: "", x: 50, y: 50, w: 0, h: 0, shape: "rect", tone: "accent", icon: "none", cue: "" }] }, []);
-    expect(r).toMatchObject({ ok: false, stage: "grounding" });
+    expect(r.ok).toBe(true);
+    expect(r.ok && r.visual.template === "diagram" && r.visual.nodes[0].label).toBe("Grew");
   });
 });

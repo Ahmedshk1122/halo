@@ -13,6 +13,8 @@ import { createStore } from "./createStore";
 export type VisualStatus = "onscreen" | "tucked" | "cleared";
 export type VisualSource = "director" | "prepared" | "command" | "manual" | "test";
 
+export type Backing = "auto" | "card" | "float";
+
 export interface VisualInstance {
   id: string;
   title: string;
@@ -73,6 +75,8 @@ export interface DecisionEntry {
   title?: string;
   template?: TemplateId;
   errors?: string[];
+  /** What Halo fixed on the way (numbers taken out, a line left out). */
+  notes?: string[];
   speechEndAt: number;
   requestMs?: number;
   modelMs?: number;
@@ -119,6 +123,8 @@ export interface ControlState {
   chips: string[];
   nextVisualNumber: number;
   glass: GlassTheme;
+  /** What sits behind visuals: auto lets Halo choose per visual; card or float for all. */
+  backing: Backing;
   cameraDeviceId: string | null;
   reducedMotion: boolean;
   keepOut: Rect | null;
@@ -158,6 +164,7 @@ export const store = createStore<ControlState>({
   chips: [],
   nextVisualNumber: 1,
   glass: "light",
+  backing: "auto",
   cameraDeviceId: null,
   reducedMotion: false,
   keepOut: null,

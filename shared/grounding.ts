@@ -239,7 +239,14 @@ export function textFields(spec: VisualSpec): { field: string; text: string }[] 
   } else if (spec.template === "goal") {
     ref("from", spec.from);
     ref("to", spec.to);
-  } else if (spec.template === "line" || spec.template === "bar") {
+  } else if (spec.template === "line") {
+    push("series_name", spec.series_name ?? "");
+    series("series", spec.series);
+    (spec.more_series ?? []).forEach((m, i) => {
+      push(`more_series[${i}].name`, m.name);
+      series(`more_series[${i}].series`, m.series);
+    });
+  } else if (spec.template === "bar") {
     series("series", spec.series);
   } else if (spec.template === "funnel") {
     series("steps", spec.steps);
@@ -261,4 +268,38 @@ export function scanSpec(spec: VisualSpec, said: SpokenNumber[] = []): Grounding
       return !inText.some((n) => at >= n.start && at < n.end);
     });
   });
+}
+
+/** Removes one flagged number (with its currency sign or unit) from a line of text. */
+export function removeNumber(text: string, match: string): string {
+  const esc = match.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const re = new RegExp(`[$€£¥]?\\s?${esc}\\s?(?:%|percent\\b|[kKmMbB]n?\\b|[x×](?![a-z]))?`, "g");
+  return text
+    .replace(re, " ")
+    .replace(/\(\s*\)/g, "")
+    .replace(/\s+([,.;:])/g, "$1")
+    .replace(/\s{2,}/g, " ")
+    .replace(/^[\s,;:–—-]+|[\s,;:–—-]+$/g, "")
+    .trim();
+}
+
+/**
+ * Takes numbers the presenter did not say out of the generated text instead of
+ * rejecting the visual. Every string in the spec equal to a flagged field's text
+ * loses the flagged numbers.
+ */
+export function scrubNumbers<T>(spec: T, violations: GroundingViolation[]): T {
+  if (violations.length === 0) return spec;
+  const byText = new Map<string, string[]>();
+  for (const v of violations) byText.set(v.text, [...(byText.get(v.text) ?? []), v.match]);
+  const walk = (x: unknown): unknown => {
+    if (typeof x === "string") {
+      const matches = byText.get(x);
+      return matches ? matches.reduce((t, m) => removeNumber(t, m), x) : x;
+    }
+    if (Array.isArray(x)) return x.map(walk);
+    if (x && typeof x === "object") return Object.fromEntries(Object.entries(x).map(([k, v]) => [k, walk(v)]));
+    return x;
+  };
+  return walk(spec) as T;
 }

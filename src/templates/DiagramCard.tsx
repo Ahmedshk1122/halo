@@ -9,8 +9,9 @@ import { BUILD_DELAY, BUILD_STAGGER, SPRING_SOFT } from "./motion";
 const TONE: Record<DiagramTone, { fill: string; stroke: string; text: string; solid: string }> = {
   accent: { fill: "color-mix(in srgb, var(--accent) 15%, transparent)", stroke: "var(--accent)", text: "var(--label)", solid: "var(--accent)" },
   highlight: { fill: "color-mix(in srgb, var(--orange) 18%, transparent)", stroke: "var(--orange)", text: "var(--label)", solid: "var(--orange)" },
-  neutral: { fill: "var(--fill)", stroke: "transparent", text: "var(--label)", solid: "var(--label-2)" },
-  muted: { fill: "var(--fill-2)", stroke: "transparent", text: "var(--label-2)", solid: "var(--label-3)" },
+  // On a card the neutral shapes need no outline; floating on video they get one (--shape-edge).
+  neutral: { fill: "var(--fill)", stroke: "var(--shape-edge, transparent)", text: "var(--label)", solid: "var(--label-2)" },
+  muted: { fill: "var(--fill-2)", stroke: "var(--shape-edge, transparent)", text: "var(--label-2)", solid: "var(--label-3)" },
 };
 
 const LABEL = 26;
@@ -39,6 +40,48 @@ interface Box {
   y: number;
   w: number;
   h: number;
+}
+
+/**
+ * Pushes overlapping boxes apart so no two labels sit on top of each other,
+ * keeping each as close to where the model put it as it can, inside the canvas.
+ */
+export function separate(boxes: Box[], within: Box, gap = 16, rounds = 60) {
+  const clamp = (b: Box) => {
+    b.x = Math.min(Math.max(b.x, within.x), within.x + within.w - b.w);
+    b.y = Math.min(Math.max(b.y, within.y), within.y + within.h - b.h);
+  };
+  boxes.forEach(clamp);
+  for (let r = 0; r < rounds; r++) {
+    let moved = false;
+    for (let i = 0; i < boxes.length; i++) {
+      for (let j = i + 1; j < boxes.length; j++) {
+        const a = boxes[i];
+        const b = boxes[j];
+        const ox = Math.min(a.x + a.w, b.x + b.w) + gap - Math.max(a.x, b.x);
+        const oy = Math.min(a.y + a.h, b.y + b.h) + gap - Math.max(a.y, b.y);
+        if (ox <= 0 || oy <= 0) continue;
+        moved = true;
+        // Move apart along the axis that needs the smaller push.
+        const acx = a.x + a.w / 2;
+        const bcx = b.x + b.w / 2;
+        const acy = a.y + a.h / 2;
+        const bcy = b.y + b.h / 2;
+        if (ox < oy) {
+          const d = (ox / 2) * (acx <= bcx ? 1 : -1);
+          a.x -= d;
+          b.x += d;
+        } else {
+          const d = (oy / 2) * (acy <= bcy ? 1 : -1);
+          a.y -= d;
+          b.y += d;
+        }
+        clamp(a);
+        clamp(b);
+      }
+    }
+    if (!moved) break;
+  }
 }
 
 /** Any visual the model composes on the fly from simple parts: frameworks, maps, a body, a race. */
@@ -76,6 +119,7 @@ export function DiagramCard({ v, reveal }: { v: RDiagram; reveal: number }) {
     return { x: X(n.x) - w / 2, y: Y(n.y) - h / 2, w, h };
   };
   const boxes = new Map(v.nodes.map((n) => [n.id, nodeBox(n)]));
+  separate([...boxes.values()], canvas);
 
   // Where a link leaves a node's box toward another point.
   const edge = (b: Box, toward: { x: number; y: number }) => {
@@ -89,7 +133,7 @@ export function DiagramCard({ v, reveal }: { v: RDiagram; reveal: number }) {
 
   // Other marker labels sit beside their marker; when two would collide, the
   // later one moves below or to the other side.
-  const placedLabels: Box[] = [];
+  const placedLabels: Box[] = [...boxes.values()];
   const freeLabels = new Map<string, { x: number; y: number; anchor: "start" | "end" }>();
   for (const m of v.markers) {
     if (!m.label) continue;
@@ -133,9 +177,9 @@ export function DiagramCard({ v, reveal }: { v: RDiagram; reveal: number }) {
           return (
             <motion.g key={`r${i}`} data-part={`region-${i}`} {...appear(r.cue)} style={{ transformOrigin: `${b.x + b.w / 2}px ${b.y + b.h / 2}px` }}>
               {r.shape === "ellipse" ? (
-                <ellipse cx={b.x + b.w / 2} cy={b.y + b.h / 2} rx={b.w / 2} ry={b.h / 2} fill={t.fill} stroke={t.stroke} strokeWidth={r.tone === "neutral" ? 0 : 2} fillOpacity={0.9} />
+                <ellipse cx={b.x + b.w / 2} cy={b.y + b.h / 2} rx={b.w / 2} ry={b.h / 2} fill={t.fill} stroke={t.stroke} strokeWidth={2} fillOpacity={0.9} />
               ) : (
-                <rect x={b.x} y={b.y} width={b.w} height={b.h} rx={18} fill={t.fill} stroke={t.stroke} strokeWidth={r.tone === "neutral" ? 0 : 2} />
+                <rect x={b.x} y={b.y} width={b.w} height={b.h} rx={18} fill={t.fill} stroke={t.stroke} strokeWidth={2} />
               )}
               {r.label && (
                 <text x={r.shape === "ellipse" ? b.x + b.w / 2 : b.x + 16} y={b.y + 32} textAnchor={r.shape === "ellipse" ? "middle" : "start"} className="dg-region-label">
@@ -157,7 +201,7 @@ export function DiagramCard({ v, reveal }: { v: RDiagram; reveal: number }) {
               <motion.path
                 d={smoothPath(pts, p.closed)}
                 fill={p.filled ? t.fill : "none"}
-                stroke={p.weight === "thick" ? (p.tone === "neutral" ? "var(--fill)" : t.fill) : t.solid}
+                stroke={p.weight === "thick" ? (p.tone === "neutral" ? "var(--track, var(--fill))" : t.fill) : t.solid}
                 strokeWidth={p.weight === "thick" ? 26 : p.weight === "thin" ? (p.filled ? 2 : 3) : 6}
                 strokeLinecap="round"
                 strokeLinejoin="round"

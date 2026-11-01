@@ -2,7 +2,7 @@
 // then show a prepared visual by id, which is much faster than building one.
 import replayPlan from "../../../fixtures/replay_plan.json";
 import { describeCatalog } from "../../../shared/data";
-import { specFromToolInput, TEMPLATE_FOR_TOOL } from "../../../shared/director";
+import { specFromToolInput, TEMPLATE_FOR_PLANNER_TOOL } from "../../../shared/director";
 import { prepareVisual } from "../../../shared/resolve";
 import { spokenNumbers } from "../../../shared/spoken";
 import type { TemplateId, VisualSpec } from "../../../shared/visuals";
@@ -29,7 +29,7 @@ async function fromServer(notes: string): Promise<{ visuals: PlannedVisual[]; mo
 function fromReplay(): { visuals: PlannedVisual[]; model: string; ms: number } {
   const calls = (replayPlan as { calls: { name: string; input: Record<string, unknown> }[] }).calls;
   const visuals = calls.flatMap((c) => {
-    const template = TEMPLATE_FOR_TOOL[c.name.replace("prepare_", "show_")];
+    const template = TEMPLATE_FOR_PLANNER_TOOL[c.name];
     if (!template) return [];
     return [{ id: String(c.input.prepared_id), when: String(c.input.when), template, spec: specFromToolInput(template, c.input) }];
   });

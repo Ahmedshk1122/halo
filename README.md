@@ -1,8 +1,8 @@
 # Halo
 
-Live visuals on your camera feed during video calls. Halo listens as you talk, follows the arc of your talk, and puts supporting visuals on your video: metric cards, charts, strategy cards, roadmaps, rough UI sketches. It's like a slide deck building itself as you speak. Often the right answer is to show nothing, and Halo knows that.
+Live visuals on your camera video, for anything you talk about. In a meeting, a lesson, a product demo or a video for social media, Halo listens and draws what you're describing as you speak: a race track and the overtake, the solar system, how a heart pumps, a village and its river, your ten reasons, the steps of a recipe, a chart of numbers you just said. It keeps building the visual as you add to it, and you can point at it, grab it, move it and throw it away.
 
-Numbers come from you: say a number and Halo can chart it, or load your data so Halo can pull up figures you ask about. Halo never invents a number, and never puts captions or your words on the video.
+Say a number and Halo can show it; load a spreadsheet if you want Halo to pull up figures you ask about. Halo never makes up numbers, and never puts captions or your words on the video.
 
 This is the web prototype. Halo renders a clean stage window in Chrome, OBS captures that window, and OBS Virtual Camera feeds it to Zoom, Teams or Meet.
 
@@ -46,11 +46,11 @@ Allow camera and microphone access when Chrome asks.
 
 ## What Halo can show
 
-Metric cards, line and bar charts, funnels, comparisons, strategy cards, roadmaps, process flows, rough app sketches, from → to cards, statements, and diagrams it composes live for anything else: a framework, your target segments, headwinds and tailwinds, how something works, a part of the body, a moment in a race. Open `/gallery` to see them all.
+Above all, drawings it composes live from scratch for anything you talk about: places, objects, machines, the body, space, a race, a story. Also lists of any length, steps, timelines, comparisons, line charts (several lines when you add a metric), bar charts, single numbers, from → to, funnels, app sketches and one-line statements. Drawings float straight on your video with no card behind them; text-heavy visuals sit on frosted glass (Settings → Behind visuals). Open `/gallery` to see them all.
 
 ## Before your talk
 
-1. **Data.** Drag your CSV or XLSX files into **Data** (or click **Load sample data**). Each sheet becomes a table with typed columns. These files are the only place numbers on screen can come from.
+1. **Data (optional).** Drag CSV or XLSX files into **Data** if you want Halo to pull up figures you ask about. Numbers you say out loud need no file.
 2. **Talk notes (optional).** Paste or open your notes in **Talk notes** and click **Prepare visuals**. One planning pass prepares the visuals you will likely need; during the talk Halo can show them instantly.
 3. **Rehearse.** In **Rehearsal**, play a script through the exact same pipeline as live speech. The sample script is an onboarding update; edit it or paste your own. The beat-by-beat report shows what Halo did and how fast.
 
@@ -150,13 +150,13 @@ To use Claude instead, run `npm run key claude` (it sets `HALO_PROVIDER=anthropi
 | `HALO_PLANNER_MODEL` | `claude-opus-5-5` | The one planning pass over your talk notes. |
 | `HALO_PLANNER_EFFORT` | `medium` | |
 
-- Output is structured with tool use and strict JSON schemas: one tool per template, plus `show_prepared` and `act`.
+- Output is structured with tool use and JSON schemas: one tool per template (`draw` is the main one), plus `show_prepared` and `act`. Strict schemas are used where the API's grammar size allows.
 - The director's rules, tools and data catalog are prompt-cached, and pre-warmed when you start listening. The cache is refreshed every four minutes while you listen.
 - On models that support it (Opus 5.5, Sonnet 5.5), requests use Anthropic's server-side refusal fallback (`fallbacks: "default"`). The default Haiku director does not need it.
 
 ## Settings
 
-- **How proactive Halo is:** quiet, balanced or eager. This also sets the minimum gap between new visuals (10, 6 or 4 seconds).
+- **How proactive Halo is:** quiet, balanced or eager. Quiet also leaves about 8 seconds between new visuals; balanced and eager show each one as soon as it helps.
 - **Glass:** light or dark material.
 - **Hand tracking**, **face zone** in the preview, **reduce motion** (the macOS setting is always respected), **camera**.
 

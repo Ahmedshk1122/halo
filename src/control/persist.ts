@@ -2,7 +2,7 @@
 import { store, type ControlState } from "./state";
 
 const KEY = "halo.v1";
-type Persisted = Pick<ControlState, "tables" | "glass" | "cameraDeviceId" | "reducedMotion"> & {
+type Persisted = Pick<ControlState, "tables" | "glass" | "backing" | "cameraDeviceId" | "reducedMotion"> & {
   provider?: ControlState["director"]["provider"];
   proactivity?: ControlState["director"]["proactivity"];
   hands?: boolean;
@@ -17,6 +17,7 @@ export function restore() {
     store.set({
       ...(Array.isArray(saved.tables) ? { tables: saved.tables } : {}),
       ...(saved.glass === "dark" || saved.glass === "light" ? { glass: saved.glass } : {}),
+      ...(saved.backing === "auto" || saved.backing === "card" || saved.backing === "float" ? { backing: saved.backing } : {}),
       ...(typeof saved.cameraDeviceId === "string" ? { cameraDeviceId: saved.cameraDeviceId } : {}),
       ...(typeof saved.reducedMotion === "boolean" ? { reducedMotion: saved.reducedMotion } : {}),
     });
@@ -42,6 +43,7 @@ export function startPersisting() {
     if (
       s.tables === prev.tables &&
       s.glass === prev.glass &&
+      s.backing === prev.backing &&
       s.cameraDeviceId === prev.cameraDeviceId &&
       s.reducedMotion === prev.reducedMotion &&
       s.director.provider === prev.director.provider &&
@@ -54,6 +56,7 @@ export function startPersisting() {
     const data: Persisted = {
       tables: s.tables,
       glass: s.glass,
+      backing: s.backing,
       cameraDeviceId: s.cameraDeviceId,
       reducedMotion: s.reducedMotion,
       provider: s.director.provider,

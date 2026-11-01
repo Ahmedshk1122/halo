@@ -38,7 +38,7 @@ describe("server director", () => {
     expect(res.decision.action).toBe("none");
     expect(llm.last?.mode).toBe("one");
     expect(llm.last?.system.every((b) => b.cache)).toBe(true);
-    expect(llm.last?.tools.map((t) => t.name)).toContain("show_metric");
+    expect(llm.last?.tools.map((t) => t.name)).toContain("show_number");
     expect(llm.last?.user).toContain("Activation went from 31 to 44%.");
   });
 
@@ -104,7 +104,7 @@ describe("Claude strict tools", async () => {
     expect(strictToolNames(tools, 0).size).toBe(0);
     const half = strictToolNames(tools, 0.5);
     expect(half.has("act")).toBe(true);
-    expect(half.has("show_diagram")).toBe(false);
+    expect(half.has("draw")).toBe(false);
   });
 
   it("retries with fewer strict tools when the grammar is too large, and remembers it", async () => {

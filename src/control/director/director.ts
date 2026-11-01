@@ -1,11 +1,11 @@
 // The director loop. Triggers on each final speech segment, and when the
-// interim transcript grows by about 12 words without a final. Only one request
+// interim transcript grows by about 6 words without a final. Only one request
 // is in flight; speech that arrives meanwhile is merged into the next request.
 // Decisions are grounded (data references resolved, text scanned) before
 // anything reaches the stage.
 
 import { describeCatalog } from "../../../shared/data";
-import type { DirectorDecision, DirectorRequest, Proactivity, TranscriptLine, VisualRef } from "../../../shared/director";
+import { similarTitle, specContent, type DirectorDecision, type DirectorRequest, type Proactivity, type TranscriptLine, type VisualRef } from "../../../shared/director";
 import { STAGE_W, type Point } from "../../../shared/geometry";
 import { prepareVisual } from "../../../shared/resolve";
 import { spokenNumbers, type SpokenNumber } from "../../../shared/spoken";
@@ -30,10 +30,13 @@ import { allVisuals, matchPrepared, matchVisual, parseCommand, type ParsedComman
 import { ServerDirector, type DirectorProvider } from "./providers";
 
 export const TRANSCRIPT_WINDOW_SEC = 60;
-export const INTERIM_TRIGGER_WORDS = 12;
-export const SPACING_SEC: Record<Proactivity, number> = { quiet: 10, balanced: 6, eager: 4 };
+export const INTERIM_TRIGGER_WORDS = 6;
+/** Gap between new visuals. Only quiet holds visuals back; balanced and eager show them as soon as they help. */
+export const SPACING_SEC: Record<Proactivity, number> = { quiet: 8, balanced: 0, eager: 0 };
 /** Director visuals: items already said are revealed by this time even if cues were paraphrased. */
 const DIRECTOR_REVEAL_GRACE_MS = 3000;
+/** A visual stays up at least this long before the director tucks it, so nothing flashes by. New visuals are never held back. */
+export const MIN_DWELL_MS = 3000;
 /** A goal card can be grown by a raised pointing hand for this long after it appears or changes. */
 const GROWABLE_MS = 20_000;
 /** Prepared visuals: reveal the next item after this many words without a cue match. */
@@ -127,7 +130,8 @@ class Director {
     if (e.type === "interim") {
       store.set({ interim: { text: e.text, at: e.at, label: e.label } });
       this.updateReveals();
-      if (this.limits.interimTriggers && wordCount(e.text) - this.interimWordsAtTrigger >= INTERIM_TRIGGER_WORDS) {
+      const interimTriggers = this.limits.interimTriggers || this.provider.name === "replay";
+      if (interimTriggers && wordCount(e.text) - this.interimWordsAtTrigger >= INTERIM_TRIGGER_WORDS) {
         this.interimWordsAtTrigger = wordCount(e.text);
         this.schedule({ trigger: "interim", speechEndAt: e.at, request: null });
       }
@@ -155,7 +159,9 @@ class Director {
       return;
     }
     // Pacing: wait out the provider's cooldown and the minimum gap between requests.
-    const wait = Math.max(this.cooldownUntil, this.lastSentAt + this.limits.minIntervalMs) - now();
+    // Recorded decisions (replay) make no network calls, so provider pacing does not apply.
+    const minInterval = this.provider.name === "replay" ? 0 : this.limits.minIntervalMs;
+    const wait = Math.max(this.cooldownUntil, this.lastSentAt + minInterval) - now();
     if (wait > 0) {
       this.pending = this.merge(this.pending, t);
       if (!this.waitTimer) this.waitTimer = window.setTimeout(() => this.flushPending(), wait);
@@ -285,7 +291,7 @@ class Director {
       arc: s.arc.summary,
       beat: s.arc.beat,
       transcript: lines,
-      onScreen: onScreen.map(ref),
+      onScreen: onScreen.map((v) => ({ ...ref(v), ...(v.spec ? { content: specContent(v.spec) } : {}) })),
       chips: chips.map(({ id, visual, title }) => ({ id, template: visual.template, title })),
       history,
       secondsSinceLastShow: s.director.lastShowAt === null ? null : (t - s.director.lastShowAt) / 1000,
@@ -333,7 +339,7 @@ class Director {
         return;
       case "tuck": {
         const ids = d.targetIds.filter((id) => s.onStage.includes(id));
-        ids.forEach(tuckVisual);
+        this.tuckWhenSeen(ids);
         this.patchLog(ctx.logId, { ...base, outcome: ids.length ? "applied" : "none", errors: ids.length ? undefined : ["Nothing on screen to tuck"] });
         return;
       }
@@ -369,7 +375,15 @@ class Director {
         }));
         this.updateReveals();
         requestAnimationFrame(() =>
-          this.patchLog(ctx.logId, { ...base, outcome: "applied", visualId: target.id, title: r.visual.title, template: r.visual.template, onScreenMs: Math.round(now() - ctx.speechEndAt) }),
+          this.patchLog(ctx.logId, {
+            ...base,
+            outcome: "applied",
+            visualId: target.id,
+            title: r.visual.title,
+            template: r.visual.template,
+            onScreenMs: Math.round(now() - ctx.speechEndAt),
+            ...(r.notes.length ? { notes: r.notes } : {}),
+          }),
         );
         return;
       }
@@ -385,7 +399,19 @@ class Director {
           this.patchLog(ctx.logId, { ...base, outcome: "dropped", errors: r.errors, title: spec.title, template: spec.template });
           return;
         }
-        // Never duplicate: an identical visual on screen is a no-op, a tucked one is recalled.
+        // The director showing the same kind of visual again under the same or a similar
+        // title is extending it (another item, another metric): update it in place,
+        // bringing it back if it was tucked, instead of dropping the new content.
+        if (!prepared) {
+          const extend =
+            s.onStage.map((id) => s.visuals[id]).find((v) => v && v.visual.template === r.visual.template && similarTitle(v.title, r.visual.title)) ??
+            allVisuals(s).find((v) => v.source !== "test" && v.visual.template === r.visual.template && similarTitle(v.title, r.visual.title));
+          if (extend) {
+            this.apply({ ...d, action: "update", targetIds: [extend.id] }, ctx);
+            return;
+          }
+        }
+        // Never duplicate a prepared visual: on screen is a no-op, a tucked one is recalled.
         const same = allVisuals(s).find((v) => v.visual.template === r.visual.template && v.title.toLowerCase() === r.visual.title.toLowerCase());
         if (same && same.status === "onscreen") {
           this.patchLog(ctx.logId, { ...base, outcome: "none", visualId: same.id, title: same.title, template: same.visual.template, errors: ["Already on screen"] });
@@ -399,7 +425,10 @@ class Director {
         const doShow = () => {
           this.deferred = null;
           const st = store.get();
-          const tuck = d.tuckIds.filter((id) => st.onStage.includes(id));
+          // Tucks the director asks for wait until each visual has been up MIN_DWELL_MS.
+          const ready = d.tuckIds.filter((id) => st.onStage.includes(id) && now() - st.visuals[id].shownAt >= MIN_DWELL_MS);
+          this.tuckWhenSeen(d.tuckIds.filter((id) => st.onStage.includes(id) && !ready.includes(id)));
+          const tuck = ready;
           const id = showVisual(r.visual, {
             spec: r.spec,
             source: prepared ? "prepared" : "director",
@@ -416,7 +445,7 @@ class Director {
           store.set((x) => ({ director: { ...x.director, lastShowAt: now() } }));
           this.addVisualToBeat(id);
           this.latencyFor.set(id, ctx.logId);
-          this.patchLog(ctx.logId, { ...base, outcome: "applied", visualId: id, title: r.visual.title, template: r.visual.template });
+          this.patchLog(ctx.logId, { ...base, outcome: "applied", visualId: id, title: r.visual.title, template: r.visual.template, ...(r.notes.length ? { notes: r.notes } : {}) });
           this.updateReveals();
           if (!store.get().stage.connected) requestAnimationFrame(() => this.onRendered(id, now(), "preview"));
         };
@@ -431,6 +460,26 @@ class Director {
         }
         return;
       }
+    }
+  }
+
+  /** Tucks each visual once it has been on screen for MIN_DWELL_MS (now, if it already has). */
+  private tuckWhenSeen(ids: string[]) {
+    for (const id of ids) {
+      const v = store.get().visuals[id];
+      if (!v) continue;
+      const wait = v.shownAt + MIN_DWELL_MS - now();
+      if (wait <= 0) {
+        tuckVisual(id);
+        continue;
+      }
+      const shownAt = v.shownAt;
+      const generation = this.generation;
+      window.setTimeout(() => {
+        const cur = store.get().visuals[id];
+        // Only if nothing changed meanwhile: still up, not re-shown, not being held.
+        if (generation === this.generation && cur && cur.status === "onscreen" && cur.shownAt === shownAt && !cur.dragging) tuckVisual(id);
+      }, wait);
     }
   }
 

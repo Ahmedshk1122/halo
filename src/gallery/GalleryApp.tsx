@@ -22,6 +22,7 @@ const SAMPLE_CHIPS: StageChip[] = [
 /** /gallery: every template with sample data, on a stand-in camera feed. */
 export function GalleryApp() {
   const [glass, setGlass] = useState<GlassTheme>("light");
+  const [backing, setBacking] = useState<"auto" | "card" | "float">("auto");
   const [backdrop, setBackdrop] = useState<BackdropKind>("room");
   const [chips, setChips] = useState(false);
   const [focus, setFocus] = useState<number | null>(null);
@@ -63,6 +64,7 @@ export function GalleryApp() {
           reveal: total ? Math.min(total, reveal[i] ?? item.reveal ?? total) : 0,
           target: null,
           dragging: false,
+          float: backing === "float" || (backing === "auto" && item.result.spec.style === "float"),
         },
       ],
       chips: chips ? SAMPLE_CHIPS : [],
@@ -85,6 +87,14 @@ export function GalleryApp() {
           <select value={glass} onChange={(e) => setGlass(e.target.value as GlassTheme)}>
             <option value="light">Light</option>
             <option value="dark">Dark</option>
+          </select>
+        </label>
+        <label>
+          Behind visuals
+          <select value={backing} onChange={(e) => setBacking(e.target.value as typeof backing)}>
+            <option value="auto">Auto</option>
+            <option value="card">Glass</option>
+            <option value="float">Nothing</option>
           </select>
         </label>
         <label>

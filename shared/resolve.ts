@@ -3,7 +3,7 @@
 // cannot be grounded rejects the visual.
 
 import { formatDelta, formatLabel, formatValue, normalizeName, type DataColumn, type DataTable } from "./data";
-import { scanSpec, type GroundingViolation } from "./grounding";
+import { scanSpec, scrubNumbers, type GroundingViolation } from "./grounding";
 import { wasSaid, type SpokenNumber } from "./spoken";
 import type {
   Accent,
@@ -12,16 +12,21 @@ import type {
   ResolvedDelta,
   SaidUnit,
   MetricSpec,
+  ProcessSpec,
   ResolvedSeries,
   ResolvedValue,
   ResolvedVisual,
   ScalarRef,
+  RoadmapSpec,
   SeriesRef,
+  StrategySpec,
+  UISketchSpec,
   VisualSpec,
 } from "./visuals";
 
 export type PrepareResult =
-  | { ok: true; visual: ResolvedVisual; spec: VisualSpec }
+  /** notes: what Halo fixed on the way (numbers taken out, a line left out), for the log. */
+  | { ok: true; visual: ResolvedVisual; spec: VisualSpec; notes: string[] }
   | { ok: false; stage: "schema" | "data" | "grounding"; errors: string[]; violations: GroundingViolation[] };
 
 class RefError extends Error {}
@@ -62,6 +67,8 @@ export interface ResolveOptions {
   compact?: boolean;
   /** Numbers the presenter said recently. Said values must be among them. */
   said?: SpokenNumber[];
+  /** Collects what was left out on the way, for the log. */
+  notes?: string[];
 }
 
 /** Column-like formatting info for a value the presenter said. */
@@ -129,13 +136,18 @@ export function resolveSeries(ref: SeriesRef, tables: DataTable[], opts: Resolve
   if (ref.table === "said") {
     const pts = (ref.said_points ?? []).filter((p) => Number.isFinite(Number(p.value)));
     if (pts.length === 0) throw new RefError("no said values in the series");
-    const points = pts.map((p) => {
+    // A point the presenter did not say is left out; the rest of the series still shows.
+    const points = pts.flatMap((p) => {
       const value = Number(p.value);
       const col = saidColumn(value, ref.said_unit, ref.said_currency);
       const display = formatValue(value, col, { compact: true });
-      if (!wasSaid(value, opts.said ?? [])) throw new RefError(`${display} was not said by the presenter or found in the data`);
-      return { label: tidy(p.label, 24), value, display };
+      if (!wasSaid(value, opts.said ?? [])) {
+        opts.notes?.push(`Left out ${display}: not said by the presenter`);
+        return [];
+      }
+      return [{ label: tidy(p.label, 24), value, display }];
     });
+    if (points.length === 0) throw new RefError("none of the values in the series were said by the presenter");
     const kind = saidColumn(points[0].value, ref.said_unit, ref.said_currency).kind;
     return { points, kind, table: "said", xColumn: "label", yColumn: "said" };
   }
@@ -165,8 +177,8 @@ export function resolveSeries(ref: SeriesRef, tables: DataTable[], opts: Resolve
 
 const EMOJI = /[\p{Extended_Pictographic}\u{FE0F}\u{200D}]/gu;
 
-export function tidy(text: string, max = 120): string {
-  let t = (text ?? "").replace(EMOJI, "").replace(/!+/g, ".").replace(/\s+/g, " ").trim();
+export function tidy(text: unknown, max = 120): string {
+  let t = String(text ?? "").replace(EMOJI, "").replace(/!+/g, ".").replace(/\s+/g, " ").trim();
   t = t.replace(/\.\.+$/, ".").replace(/\s+\./g, ".");
   if (t.length > max) {
     t = t.slice(0, max).replace(/\s+\S*$/, "").replace(/[,;:\s]+$/, "") + "…";
@@ -174,47 +186,113 @@ export function tidy(text: string, max = 120): string {
   return t;
 }
 
-function tidyList(items: string[], maxItems: number, maxLen: number): string[] {
-  return (items ?? []).map((s) => tidy(s, maxLen)).filter(Boolean).slice(0, maxItems);
+/**
+ * No caps on what the presenter says: every item they list is kept. This only
+ * guards the renderer against a runaway reply.
+ */
+const MAX_ITEMS = 40;
+
+/** Tools are not all strict, so a field can arrive missing or the wrong type: read arrays and objects defensively. */
+const list = <T>(v: unknown): T[] => (Array.isArray(v) ? (v as T[]).filter((x) => x !== null && x !== undefined) : []);
+const record = (v: unknown): Record<string, unknown> => (v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : {});
+
+function tidyList(items: unknown, maxItems: number, maxLen: number): string[] {
+  return list<unknown>(items).map((s) => tidy(s, maxLen)).filter(Boolean).slice(0, maxItems);
 }
 
-const tidyRef = (r: ScalarRef): ScalarRef => (r ? { ...r, said_label: tidy(r.said_label ?? "", 32) } : r);
+const NONE_REF: ScalarRef = { table: "", column: "", pick: "none", match_column: "", match_value: "" };
+const EMPTY_SERIES: SeriesRef = { table: "", x: "", y: "", filter_column: "", filter_value: "" };
 
-/** Applies copy rules and limits. Returns a cleaned copy of the spec. */
+const tidyRef = (r: unknown): ScalarRef => {
+  const x = record(r);
+  if (!x.pick) return NONE_REF;
+  return { ...NONE_REF, ...(x as Partial<ScalarRef>), table: String(x.table ?? ""), column: String(x.column ?? ""), said_label: tidy(x.said_label ?? "", 32) } as ScalarRef;
+};
+const tidySeries = (r: unknown): SeriesRef => {
+  const x = record(r);
+  return {
+    ...EMPTY_SERIES,
+    ...(x as Partial<SeriesRef>),
+    table: String(x.table ?? ""),
+    x: String(x.x ?? ""),
+    y: String(x.y ?? ""),
+    filter_column: String(x.filter_column ?? ""),
+    filter_value: String(x.filter_value ?? ""),
+    ...(x.said_points !== undefined ? { said_points: list<{ label: string; value: number }>(x.said_points).slice(0, MAX_ITEMS) } : {}),
+  } as SeriesRef;
+};
+
+/** Applies copy rules. Returns a cleaned copy of the spec with every field present. */
 export function tidySpec(spec: VisualSpec): VisualSpec {
-  const base = { title: tidy(spec.title, 44), aliases: (spec.aliases ?? []).map((a) => a.toLowerCase().trim()).filter(Boolean).slice(0, 8) };
+  const base = {
+    title: tidy(spec.title, 44),
+    aliases: list<unknown>(spec.aliases).map((a) => String(a).toLowerCase().trim()).filter(Boolean).slice(0, 8),
+    style: spec.style === "float" ? ("float" as const) : ("card" as const),
+  };
+  const cue = (c: unknown) => tidy(c ?? "", 40);
   switch (spec.template) {
     case "metric":
-      return { ...spec, ...base, caption: tidy(spec.caption, 60), value: tidyRef(spec.value), baseline: tidyRef(spec.baseline) };
-    case "line":
-    case "bar":
-      return { ...spec, ...base, subtitle: tidy(spec.subtitle, 60) };
-    case "funnel":
-      return { ...spec, ...base, subtitle: tidy(spec.subtitle, 60) };
-    case "comparison":
       return {
         ...spec,
         ...base,
-        a: { ...spec.a, label: tidy(spec.a.label, 28), points: tidyList(spec.a.points, 4, 48), value: tidyRef(spec.a.value) },
-        b: { ...spec.b, label: tidy(spec.b.label, 28), points: tidyList(spec.b.points, 4, 48), value: tidyRef(spec.b.value) },
+        caption: tidy(spec.caption, 60),
+        value: tidyRef(spec.value),
+        baseline: tidyRef(spec.baseline),
+        trend: tidySeries(spec.trend),
+        good_direction: spec.good_direction === "down" ? "down" : "up",
       };
+    case "line":
+      return {
+        ...spec,
+        ...base,
+        subtitle: tidy(spec.subtitle, 60),
+        series_name: tidy(spec.series_name ?? "", 24),
+        series: tidySeries(spec.series),
+        more_series: list<{ name: unknown; series: unknown }>(spec.more_series)
+          .map((m) => ({ name: tidy(record(m).name, 24), series: tidySeries(record(m).series) }))
+          .filter((m) => m.series.table)
+          .slice(0, 4),
+      };
+    case "bar":
+      return { ...spec, ...base, subtitle: tidy(spec.subtitle, 60), series: tidySeries(spec.series), highlight_label: tidy(spec.highlight_label ?? "", 40) };
+    case "funnel":
+      return { ...spec, ...base, subtitle: tidy(spec.subtitle, 60), steps: tidySeries(spec.steps), highlight_step: tidy(spec.highlight_step ?? "", 40) };
+    case "comparison": {
+      const side = (v: unknown) => {
+        const x = record(v);
+        return { label: tidy(x.label, 28), points: tidyList(x.points, MAX_ITEMS, 48), value: tidyRef(x.value) };
+      };
+      return { ...spec, ...base, a: side(spec.a), b: side(spec.b), favor: spec.favor === "a" || spec.favor === "b" ? spec.favor : "none" };
+    }
     case "strategy":
       return {
         ...spec,
         ...base,
-        points: spec.points.slice(0, 4).map((p) => ({ ...p, text: tidy(p.text, 52), detail: tidy(p.detail, 64), cue: p.cue ?? "" })),
+        reveal: spec.reveal === "all" ? "all" : "progressive",
+        points: list<StrategySpec["points"][number]>(spec.points)
+          .slice(0, MAX_ITEMS)
+          .map((p) => ({ ...p, icon: p.icon, text: tidy(p.text, 52), detail: tidy(p.detail, 64), cue: cue(p.cue) }))
+          .filter((p) => p.text),
       };
     case "roadmap":
       return {
         ...spec,
         ...base,
-        items: spec.items.slice(0, 6).map((p) => ({ ...p, when: tidy(p.when, 16), label: tidy(p.label, 32), detail: tidy(p.detail, 48), cue: p.cue ?? "" })),
+        reveal: spec.reveal === "all" ? "all" : "progressive",
+        items: list<RoadmapSpec["items"][number]>(spec.items)
+          .slice(0, MAX_ITEMS)
+          .map((p) => ({ ...p, when: tidy(p.when, 16), label: tidy(p.label, 32), detail: tidy(p.detail, 48), cue: cue(p.cue) }))
+          .filter((p) => p.label || p.when),
       };
     case "process":
       return {
         ...spec,
         ...base,
-        steps: spec.steps.slice(0, 5).map((p) => ({ ...p, label: tidy(p.label, 28), detail: tidy(p.detail, 48), cue: p.cue ?? "" })),
+        reveal: spec.reveal === "all" ? "all" : "progressive",
+        steps: list<ProcessSpec["steps"][number]>(spec.steps)
+          .slice(0, MAX_ITEMS)
+          .map((p) => ({ ...p, label: tidy(p.label, 28), detail: tidy(p.detail, 48), cue: cue(p.cue) }))
+          .filter((p) => p.label),
       };
     case "ui_sketch":
       return {
@@ -223,13 +301,23 @@ export function tidySpec(spec: VisualSpec): VisualSpec {
         caption: tidy(spec.caption, 60),
         window_title: tidy(spec.window_title, 28),
         heading: tidy(spec.heading, 36),
-        sidebar: tidyList(spec.sidebar, 6, 18),
-        blocks: spec.blocks.slice(0, 4).map((b) => ({ ...b, label: tidy(b.label, 32), items: tidyList(b.items, 6, 24) })),
+        sidebar: tidyList(spec.sidebar, 8, 18),
+        blocks: list<UISketchSpec["blocks"][number]>(spec.blocks)
+          .slice(0, 6)
+          .map((b) => ({ ...b, label: tidy(b.label, 32), items: tidyList(b.items, 8, 24), highlight: !!b.highlight })),
       };
     case "statement":
       return { ...spec, ...base, kicker: tidy(spec.kicker, 28), text: tidy(spec.text, 90) };
     case "goal":
-      return { ...spec, ...base, from: tidyRef(spec.from), to: tidyRef(spec.to), from_label: tidy(spec.from_label, 24), to_label: tidy(spec.to_label, 24) };
+      return {
+        ...spec,
+        ...base,
+        from: tidyRef(spec.from),
+        to: tidyRef(spec.to),
+        from_label: tidy(spec.from_label, 24),
+        to_label: tidy(spec.to_label, 24),
+        good_direction: spec.good_direction === "down" ? "down" : "up",
+      };
     case "diagram":
       return tidyDiagram({ ...spec, ...base });
   }
@@ -249,7 +337,7 @@ function tidyDiagram(spec: DiagramSpec): DiagramSpec {
     caption: tidy(spec.caption ?? "", 60),
     aspect: spec.aspect === "wide" || spec.aspect === "tall" ? spec.aspect : "square",
     reveal: spec.reveal === "progressive" ? "progressive" : "all",
-    regions: (spec.regions ?? []).slice(0, 6).map((r) => ({
+    regions: list<DiagramSpec["regions"][number]>(spec.regions).slice(0, 16).map((r) => ({
       ...r,
       label: tidy(r.label, 28),
       x: pct(r.x, 10),
@@ -260,7 +348,7 @@ function tidyDiagram(spec: DiagramSpec): DiagramSpec {
       tone: toneOf(r.tone),
       cue: cue(r.cue),
     })),
-    nodes: (spec.nodes ?? []).slice(0, 14).map((n, i) => ({
+    nodes: list<DiagramSpec["nodes"][number]>(spec.nodes).slice(0, MAX_ITEMS).map((n, i) => ({
       ...n,
       id: String(n.id || `n${i + 1}`),
       label: tidy(n.label, 32),
@@ -274,18 +362,18 @@ function tidyDiagram(spec: DiagramSpec): DiagramSpec {
       icon: n.icon ?? "none",
       cue: cue(n.cue),
     })),
-    links: (spec.links ?? []).slice(0, 16).map((l) => ({
+    links: list<DiagramSpec["links"][number]>(spec.links).slice(0, MAX_ITEMS).map((l) => ({
       ...l,
       label: tidy(l.label ?? "", 24),
       style: l.style === "line" || l.style === "dashed" ? l.style : "arrow",
       tone: toneOf(l.tone),
       cue: cue(l.cue),
     })),
-    paths: (spec.paths ?? []).slice(0, 6).map((p, i) => ({
+    paths: list<DiagramSpec["paths"][number]>(spec.paths).slice(0, 16).map((p, i) => ({
       ...p,
       id: String(p.id || `p${i + 1}`),
       label: tidy(p.label ?? "", 24),
-      points: (p.points ?? []).slice(0, 24).map((q) => ({ x: pct(q.x), y: pct(q.y) })),
+      points: list<{ x: number; y: number }>(p.points).slice(0, 64).map((q) => ({ x: pct(q.x), y: pct(q.y) })),
       closed: !!p.closed,
       filled: !!p.closed && !!p.filled,
       weight: p.weight === "thin" || p.weight === "thick" ? p.weight : "normal",
@@ -293,7 +381,7 @@ function tidyDiagram(spec: DiagramSpec): DiagramSpec {
       tone: toneOf(p.tone),
       cue: cue(p.cue),
     })),
-    markers: (spec.markers ?? []).slice(0, 12).map((m, i) => ({
+    markers: list<DiagramSpec["markers"][number]>(spec.markers).slice(0, MAX_ITEMS).map((m, i) => ({
       ...m,
       id: String(m.id || `m${i + 1}`),
       label: tidy(m.label ?? "", 28),
@@ -399,19 +487,20 @@ export function prepareVisual(input: VisualSpec, tables: DataTable[], opts: { sa
   const shapeErrors = checkShape(spec);
   if (shapeErrors.length) return { ok: false, stage: "schema", errors: shapeErrors, violations: [] };
 
-  const violations = scanSpec(spec, opts.said ?? []);
-  if (violations.length) {
-    return {
-      ok: false,
-      stage: "grounding",
-      errors: violations.map((v) => `${v.field}: "${v.match}" (${v.why})`),
-      violations,
-    };
+  // Numbers the presenter did not say come out of the text; the visual still shows.
+  const notes: string[] = [];
+  const found = scanSpec(spec, opts.said ?? []);
+  if (found.length) {
+    spec = scrubNumbers(spec, found);
+    notes.push(`Took out numbers you did not say: ${[...new Set(found.map((v) => v.match))].join(", ")}`);
+    const violations = scanSpec(spec, opts.said ?? []);
+    const stillBad = [...checkShape(spec), ...violations.map((v) => `${v.field}: "${v.match}" (${v.why})`)];
+    if (stillBad.length) return { ok: false, stage: "grounding", errors: stillBad, violations };
   }
 
   try {
-    const visual = resolve(spec, tables, opts.said ?? []);
-    return { ok: true, visual, spec };
+    const visual = resolve(spec, tables, opts.said ?? [], notes);
+    return { ok: true, visual, spec, notes };
   } catch (e) {
     if (e instanceof RefError) return { ok: false, stage: "data", errors: [e.message], violations: [] };
     return { ok: false, stage: "schema", errors: [`malformed spec: ${(e as Error).message}`], violations: [] };
@@ -424,8 +513,8 @@ function columnOf(v: ResolvedValue, tables: DataTable[]): Pick<DataColumn, "kind
   return findColumn(findTable(tables, v.table), v.column);
 }
 
-function resolve(spec: VisualSpec, tables: DataTable[], said: SpokenNumber[]): ResolvedVisual {
-  const opts: ResolveOptions = { compact: true, said };
+function resolve(spec: VisualSpec, tables: DataTable[], said: SpokenNumber[], notes: string[] = []): ResolvedVisual {
+  const opts: ResolveOptions = { compact: true, said, notes };
   switch (spec.template) {
     case "metric": {
       const value = resolveScalar(spec.value, tables, opts);
@@ -455,7 +544,18 @@ function resolve(spec: VisualSpec, tables: DataTable[], said: SpokenNumber[]): R
     case "line": {
       const series = resolveSeries(spec.series, tables, opts);
       if (!series || series.points.length < 2) throw new RefError("line chart needs at least two points");
-      return { template: "line", title: spec.title, subtitle: spec.subtitle, series, accent: "blue" };
+      // Extra lines: one that cannot be resolved is left out, the chart still shows.
+      const more = (spec.more_series ?? []).flatMap((m) => {
+        try {
+          const r = resolveSeries(m.series, tables, opts);
+          return r && r.points.length > 0 ? [{ name: m.name || r.yColumn, series: r }] : [];
+        } catch (e) {
+          if (!(e instanceof RefError)) throw e;
+          opts.notes?.push(`Left out the ${m.name || "extra"} line: ${e.message}`);
+          return [];
+        }
+      });
+      return { template: "line", title: spec.title, subtitle: spec.subtitle, name: spec.series_name || (more.length ? series.yColumn : ""), series, more, accent: "blue" };
     }
     case "bar": {
       const series = resolveSeries(spec.series, tables, opts);
@@ -464,7 +564,7 @@ function resolve(spec: VisualSpec, tables: DataTable[], said: SpokenNumber[]): R
         template: "bar",
         title: spec.title,
         subtitle: spec.subtitle,
-        series: { ...series, points: series.points.slice(0, 12) },
+        series: { ...series, points: series.points.slice(0, 30) },
         highlightIndex: labelIndex(series, spec.highlight_label),
         accent: "blue",
       };

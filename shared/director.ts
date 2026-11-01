@@ -34,6 +34,53 @@ export interface VisualRef {
   ageSec?: number;
   reveal?: string;
   status?: string;
+  /** What the visual shows now (compact spec), so the director can extend it. On-screen visuals only. */
+  content?: string;
+}
+
+const TITLE_STOP = new Set(["the", "a", "an", "of", "and", "for", "to", "in", "on", "our", "your", "vs", "versus", "by", "with"]);
+const titleWords = (t: string) => t.toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter((w) => w && !TITLE_STOP.has(w));
+
+/** Same title, or one title's words all in the other ("Activation" / "Activation trend"), not "Product risks" / "Market risks". */
+export function similarTitle(a: string, b: string): boolean {
+  const x = titleWords(a);
+  const y = titleWords(b);
+  if (x.length === 0 || y.length === 0) return false;
+  const [short, long] = x.length <= y.length ? [x, y] : [y, x];
+  return short.every((w) => long.includes(w));
+}
+
+/**
+ * Compact JSON of a spec for the director: empty fields, aliases and the template
+ * name left out, numbers rounded. Long diagrams drop their outline points first.
+ */
+export function specContent(spec: object | null, max = 3000): string {
+  if (!spec) return "";
+  const prune = (v: unknown, key = ""): unknown => {
+    if (key === "aliases" || key === "template") return undefined;
+    if (Array.isArray(v)) {
+      const a = v.map((x) => prune(x)).filter((x) => x !== undefined);
+      return a.length ? a : undefined;
+    }
+    if (v && typeof v === "object") {
+      const o: Record<string, unknown> = {};
+      for (const [k, x] of Object.entries(v)) {
+        const p = prune(x, k);
+        if (p !== undefined) o[k] = p;
+      }
+      return Object.keys(o).length ? o : undefined;
+    }
+    if (v === "" || v === null || v === undefined || v === false) return undefined;
+    if (typeof v === "number") return Math.round(v * 100) / 100;
+    return v;
+  };
+  const pruned = (prune(spec) ?? {}) as Record<string, unknown>;
+  let text = JSON.stringify(pruned);
+  if (text.length > max && Array.isArray(pruned.paths)) {
+    pruned.paths = (pruned.paths as Record<string, unknown>[]).map((p) => ({ ...p, points: `${(p.points as unknown[] | undefined)?.length ?? 0} points (redraw them)` }));
+    text = JSON.stringify(pruned);
+  }
+  return text.length > max ? `${text.slice(0, max)}…` : text;
 }
 
 export interface PreparedRef {
@@ -159,6 +206,10 @@ const cue = str("Two to four distinctive words the presenter says for this item,
 const reveal = enm(["progressive", "all"], "progressive: items appear as the presenter says each cue. all: everything at once.");
 const title = str("Two to five words, sentence case, no numbers. Also the chip label when tucked.");
 const aliases = strs("Words the presenter might use to ask for this visual again, like funnel or drop-off.");
+const style = enm(
+  ["card", "float"],
+  "card: on a frosted glass card. float: drawn straight onto the video with no card behind it, so it feels part of the scene: drawings, shapes, a big number, a few words.",
+);
 
 /** Template-specific tool properties (the spec without template/title/aliases). */
 const TEMPLATE_PROPS: Record<TemplateId, Record<string, JsonSchema>> = {
@@ -171,7 +222,12 @@ const TEMPLATE_PROPS: Record<TemplateId, Record<string, JsonSchema>> = {
   },
   line: {
     subtitle: str("Short context, words only. May be empty."),
-    series: seriesRef("The line: label column and value column."),
+    series_name: str("Name of the first metric, e.g. Revenue. Shown as its label when there is more than one line. May be empty."),
+    series: seriesRef("The main line: label column and value column, or the points the presenter said."),
+    more_series: arr(
+      obj({ name: str("Name of this metric, e.g. Churn."), series: seriesRef("This metric over the same periods.") }),
+      "Up to two more metrics drawn as extra lines on the same chart, e.g. one the presenter just added. Usually empty.",
+    ),
   },
   bar: {
     subtitle: str("Short context, words only. May be empty."),
@@ -184,24 +240,24 @@ const TEMPLATE_PROPS: Record<TemplateId, Record<string, JsonSchema>> = {
     highlight_step: str("Step label to emphasize (where the drop-off is), as in the catalog, or empty."),
   },
   comparison: {
-    a: obj({ label: str("Side A name."), value: scalarRef("Optional number for side A. pick none if qualitative."), points: strs("Two to four short points, words only.") }),
-    b: obj({ label: str("Side B name."), value: scalarRef("Optional number for side B. pick none if qualitative."), points: strs("Two to four short points, words only.") }),
+    a: obj({ label: str("Side A name."), value: scalarRef("Optional number for side A. pick none if qualitative."), points: strs("Short points, words only, as many as the presenter gives.") }),
+    b: obj({ label: str("Side B name."), value: scalarRef("Optional number for side B. pick none if qualitative."), points: strs("Short points, words only, as many as the presenter gives.") }),
     favor: enm(["a", "b", "none"], "The side the presenter argues for."),
   },
   strategy: {
     reveal,
-    points: arr(obj({ icon, text: str("Two to six words."), detail: str("Optional short line, or empty."), cue }), "One to four points, in the order spoken."),
+    points: arr(obj({ icon, text: str("Two to six words."), detail: str("Optional short line, or empty."), cue }), "Every point the presenter has said so far, in the order spoken. No limit: long lists are laid out to fit."),
   },
   roadmap: {
     reveal,
     items: arr(
       obj({ when: str("Month, quarter or year name, e.g. November or Q1."), label: str("Two to four words."), detail: str("Optional short line, or empty."), cue }),
-      "One to six milestones in order.",
+      "Every milestone said so far, in order.",
     ),
   },
   process: {
     reveal,
-    steps: arr(obj({ icon, label: str("One to three words."), detail: str("Optional short line, or empty."), cue }), "One to five steps in order."),
+    steps: arr(obj({ icon, label: str("One to three words."), detail: str("Optional short line, or empty."), cue }), "Every step said so far, in order."),
   },
   ui_sketch: {
     caption: str("Short line under the title, or empty."),
@@ -303,44 +359,52 @@ const TEMPLATE_PROPS: Record<TemplateId, Record<string, JsonSchema>> = {
 };
 
 const TOOL_DESCRIPTIONS: Record<TemplateId, string> = {
-  metric: "Show one KPI from the data: big value, change since an earlier row, sparkline. For a headline number.",
-  line: "Show a trend over time from the data as a line chart.",
-  bar: "Show values across categories from the data as bars.",
-  funnel: "Show steps of a funnel from the data, with the drop between steps. Highlight where people drop off.",
-  comparison: "Show two options side by side (before/after, us/them, A/B). Numbers only via data references.",
-  strategy: "Show a title and one to four points with icons: moves, pillars, principles, reasons.",
+  metric: "Show one headline number big, from what the presenter said or the data, with the change since an earlier value when there is one.",
+  line: "Show how a number changes over time as a line chart, from numbers the presenter said or from the data. Up to three metrics as separate lines.",
+  bar: "Compare values across categories (regions, products, teams) as bars, from numbers the presenter said or from the data.",
+  funnel: "Show steps of a funnel, from numbers the presenter said or the data, with the drop between steps. Highlight where people drop off.",
+  comparison: "Show two options side by side (before/after, us/them, A/B), with an optional number for each that the presenter said or the data holds.",
+  strategy: "Show a list of points with icons, as many as the presenter gives: factors, reasons, ideas, features, tips, rules, ingredients, anything listed.",
   roadmap: "Show milestones on a timeline by month, quarter or year.",
-  process: "Show a sequence of steps as a flow.",
+  process: "Show a sequence of steps as a flow, as many as the presenter gives: how something is done, made or happens.",
   ui_sketch: "Show a rough wireframe of an app screen when the presenter asks the audience to picture a screen.",
   statement: "Show one short line, for a closing ask or key takeaway.",
-  goal: "Show where something is and where it should go: two values side by side with the change, e.g. revenue today versus the target.",
+  goal: "Show where something is and where it should go: two values side by side with the change, like today and the goal.",
   diagram:
-    "Draw anything worth seeing that the other visuals don't fit, from scratch: a framework or matrix, target segments, factors (headwinds and tailwinds), a mechanism, a map of relationships, a body and its parts, a race or a play-by-play. Compose it from regions, nodes, links, paths (draw outlines like a body or a track yourself) and markers on a 0-100 canvas, x to the right and y down. Keep it simple and clear: a few well-placed parts, labels of one to four words, nothing overlapping.",
+    "Draw anything, live, from scratch: whatever the speaker is talking about or asks for, real or imagined, on Earth, in space or nowhere at all. A race track and the overtake, the solar system, an atom, how a heart pumps, a village and its river, a machine, a map, a family tree, a flow of ideas, a scene from a story. Compose it on a 0-100 canvas (x to the right, y down) from paths (any outline or line you draw point by point: a coastline, a body, a track, a route, a wave), regions (areas, circles and ellipses), nodes (labeled boxes, bubbles or plain labels), links (arrows and connections) and markers (dots, pins, cars or players). Draw the real shapes as best you know them, with enough points for curves. Make it read at a glance on a small video: short labels, every label clear of the others, nothing jammed against an edge. Add to it with replace_id as the speaker adds detail.",
 };
 
 export const TOOL_FOR_TEMPLATE: Record<TemplateId, string> = {
-  metric: "show_metric",
+  diagram: "draw",
+  strategy: "show_list",
+  process: "show_steps",
+  comparison: "show_comparison",
   line: "show_line_chart",
   bar: "show_bar_chart",
-  funnel: "show_funnel",
-  comparison: "show_comparison",
-  strategy: "show_strategy",
-  roadmap: "show_roadmap",
-  process: "show_process",
-  ui_sketch: "show_ui_sketch",
   statement: "show_statement",
+  ui_sketch: "show_ui_sketch",
+  roadmap: "show_timeline",
   goal: "show_goal",
-  diagram: "show_diagram",
+  metric: "show_number",
+  funnel: "show_funnel",
 };
+
+/** Planner tool names: prepare_ plus the director tool's name without show_ (draw → prepare_draw). */
+export const PLANNER_TOOL_FOR_TEMPLATE = Object.fromEntries(
+  Object.entries(TOOL_FOR_TEMPLATE).map(([t, name]) => [t, `prepare_${name.replace(/^show_/, "")}`]),
+) as Record<TemplateId, string>;
+export const TEMPLATE_FOR_PLANNER_TOOL: Record<string, TemplateId> = Object.fromEntries(
+  Object.entries(PLANNER_TOOL_FOR_TEMPLATE).map(([t, name]) => [name, t as TemplateId]),
+);
 
 export const TEMPLATE_FOR_TOOL: Record<string, TemplateId> = Object.fromEntries(
   Object.entries(TOOL_FOR_TEMPLATE).map(([t, name]) => [name, t as TemplateId]),
 );
 
 const COMMON = {
-  reason: str("One short sentence for the presenter's log: why this, now."),
-  beat: str("Two to four words naming the current part of the talk."),
-  arc: str("Running summary of the whole talk so far, at most three sentences, updated with what was just said."),
+  reason: str("A few words for the speaker's private log: why this, now."),
+  beat: str("Two to four words naming what they are talking about now."),
+  arc: str("Running summary of everything said so far, at most two sentences, updated with what was just said."),
 };
 
 export interface ToolDef {
@@ -360,6 +424,7 @@ export function directorTools(): ToolDef[] {
       tuck_ids: strs("Ids of on-screen visuals to tuck now because the beat moved on."),
       title,
       aliases,
+      style,
       ...TEMPLATE_PROPS[t],
     }),
   }));
@@ -389,13 +454,14 @@ export function directorTools(): ToolDef[] {
 /** Tool definitions for the planner: same templates, keyed by a prepared id. */
 export function plannerTools(): ToolDef[] {
   return (Object.keys(TOOL_FOR_TEMPLATE) as TemplateId[]).map((t) => ({
-    name: TOOL_FOR_TEMPLATE[t].replace("show_", "prepare_"),
+    name: PLANNER_TOOL_FOR_TEMPLATE[t],
     description: `Prepare: ${TOOL_DESCRIPTIONS[t]}`,
     input_schema: obj({
       prepared_id: str("Short unique id, lowercase with dashes, e.g. activation-metric."),
       when: str("The moment in the talk to show it, in a few words, e.g. when the activation headline is stated."),
       title,
       aliases,
+      style,
       ...TEMPLATE_PROPS[t],
     }),
   }));

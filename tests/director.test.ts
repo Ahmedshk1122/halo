@@ -36,7 +36,7 @@ describe("director tools", () => {
   it("map tool calls to decisions", () => {
     const show = toolCallToDecision("show_statement", { reason: "r", beat: "b", arc: "a", replace_id: "", tuck_ids: ["v1"], title: "The ask", aliases: [], kicker: "The ask", text: "Back the plan" });
     expect(show).toMatchObject({ action: "show", tuckIds: ["v1"], visual: { template: "statement", text: "Back the plan" } });
-    const update = toolCallToDecision("show_strategy", { reason: "", beat: "", arc: "", replace_id: "v3", tuck_ids: [], title: "Moves", aliases: [], reveal: "progressive", points: [] });
+    const update = toolCallToDecision("show_list", { reason: "", beat: "", arc: "", replace_id: "v3", tuck_ids: [], title: "Moves", aliases: [], reveal: "progressive", points: [] });
     expect(update).toMatchObject({ action: "update", targetIds: ["v3"] });
     expect(toolCallToDecision("act", { action: "recall", target_ids: ["v2"], reason: "", beat: "", arc: "" })).toMatchObject({ action: "recall", targetIds: ["v2"] });
     expect(toolCallToDecision("nonsense", {}).action).toBe("none");
@@ -80,7 +80,46 @@ describe("director prompt", () => {
       request: null,
     });
     expect(msg).toContain("<just_said>\n[1s ago] Activation went from 31 to 44%");
-    expect(msg).toContain('- v1 metric "Activation rate"');
+    expect(msg).toContain('- v1 show_number "Activation rate"');
     expect(contextBlock({ catalog: "Table x", prepared: [] })).toContain("<prepared_visuals>\nNone.");
+  });
+});
+
+describe("following the speaker", async () => {
+  const { similarTitle, specContent } = await import("../shared/director");
+
+  it("treats the same visual under a longer or shorter title as the same one", () => {
+    expect(similarTitle("Activation", "Activation trend")).toBe(true);
+    expect(similarTitle("Four factors", "four factors")).toBe(true);
+    expect(similarTitle("The race", "Race")).toBe(true);
+    expect(similarTitle("Product risks", "Market risks")).toBe(false);
+    expect(similarTitle("Planets", "Moons")).toBe(false);
+  });
+
+  it("describes what is on screen compactly, so the director can extend it", () => {
+    const text = specContent({
+      template: "strategy",
+      title: "Why it matters",
+      aliases: ["why"],
+      reveal: "progressive",
+      points: [
+        { icon: "sparkles", text: "Speed", detail: "", cue: "speed" },
+        { icon: "sparkles", text: "Trust", detail: "", cue: "" },
+      ],
+    });
+    expect(JSON.parse(text)).toEqual({
+      title: "Why it matters",
+      reveal: "progressive",
+      points: [
+        { icon: "sparkles", text: "Speed", cue: "speed" },
+        { icon: "sparkles", text: "Trust" },
+      ],
+    });
+  });
+
+  it("drops a long drawing's outline points first when the content is too long", () => {
+    const points = Array.from({ length: 60 }, (_, i) => ({ x: i, y: i }));
+    const text = specContent({ title: "Track", paths: [{ id: "t", points }] }, 400);
+    expect(text).toContain("60 points (redraw them)");
   });
 });

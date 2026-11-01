@@ -2,7 +2,7 @@
   "_comment": "Offline replay of a planner response for samples/talk_notes.md (test double, not Claude output).",
   "calls": [
     {
-      "name": "prepare_metric",
+      "name": "prepare_number",
       "input": {
         "prepared_id": "activation-metric",
         "when": "when the activation headline is stated",
@@ -59,7 +59,7 @@
       }
     },
     {
-      "name": "prepare_strategy",
+      "name": "prepare_list",
       "input": {
         "prepared_id": "three-moves",
         "when": "when the three moves are announced",
@@ -134,7 +134,7 @@
       }
     },
     {
-      "name": "prepare_roadmap",
+      "name": "prepare_timeline",
       "input": {
         "prepared_id": "rollout",
         "when": "when the rollout months are described",

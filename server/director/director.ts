@@ -30,8 +30,9 @@ export async function decide(llm: LLMClient, req: DirectorRequest, opts: Directo
     user: userMessage(req),
     tools: TOOLS,
     mode: "one",
-    maxTokens: 2048,
-    timeoutMs: opts.timeoutMs ?? 9000,
+    // Room for a full diagram; a cut-off tool call would be dropped.
+    maxTokens: 4096,
+    timeoutMs: opts.timeoutMs ?? 12_000,
   });
 
   const call = result.calls[0];

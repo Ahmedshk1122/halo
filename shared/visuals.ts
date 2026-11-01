@@ -126,6 +126,8 @@ interface SpecBase {
   title: string;
   /** Extra words a presenter might use to ask for this visual again ("funnel", "drop-off"). */
   aliases: string[];
+  /** card: on frosted glass. float: straight on the video, no card. Settings can override. */
+  style?: "card" | "float";
 }
 
 export interface MetricSpec extends SpecBase {
@@ -143,7 +145,11 @@ export interface MetricSpec extends SpecBase {
 export interface LineSpec extends SpecBase {
   template: "line";
   subtitle: string;
+  /** Name of the main metric, shown as its label when the chart has more than one line. */
+  series_name?: string;
   series: SeriesRef;
+  /** Further metrics over the same periods, drawn as extra lines (e.g. one the presenter added). */
+  more_series?: { name: string; series: SeriesRef }[];
 }
 
 export interface BarSpec extends SpecBase {
@@ -404,7 +410,11 @@ export interface RLine {
   template: "line";
   title: string;
   subtitle: string;
+  /** Label of the main line (shown when there is more than one). */
+  name: string;
   series: ResolvedSeries;
+  /** Extra lines, each with its own name and values. */
+  more: { name: string; series: ResolvedSeries }[];
   accent: Accent;
 }
 
