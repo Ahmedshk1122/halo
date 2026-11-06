@@ -28,7 +28,7 @@ import {
 import { onStageRendered } from "../stageSync";
 import { store, type ControlState, type DecisionEntry, type DecisionTrigger, type VisualInstance } from "../state";
 import { ALL, allVisuals, matchPrepared, matchVisual, parseCommand, type ParsedCommand } from "./commands";
-import { cancelAllDrawings, drawInto } from "./artist";
+import { cancelAllDrawings, drawInto, NOTHING_DRAWN } from "./artist";
 import { ServerDirector, type DirectorProvider } from "./providers";
 
 export const TRANSCRIPT_WINDOW_SEC = 60;
@@ -385,8 +385,14 @@ class Director {
           return;
         }
         // A drawing being redrawn keeps showing its current parts while the new version streams in.
-        const redraw = d.visual.template === "drawing" && target.spec?.template === "drawing" ? target.spec.elements : null;
-        const incoming = redraw ? { ...d.visual, elements: redraw, status: "drawing" as const } : d.visual;
+        const was = target.spec?.template === "drawing" ? target.spec : null;
+        const redraw =
+          d.visual.template === "drawing" && was
+            ? (d.visual.dimension ?? "2d") === (was.dimension ?? "2d")
+              ? { elements: was.elements, objects: was.objects ?? [] }
+              : NOTHING_DRAWN
+            : null;
+        const incoming = redraw && d.visual.template === "drawing" ? { ...d.visual, ...redraw, scene: was?.scene, status: "drawing" as const } : d.visual;
         const r = prepareVisual(incoming, s.tables, { said: this.saidRecently() });
         if (!r.ok) {
           this.patchLog(ctx.logId, { ...base, outcome: "dropped", errors: r.errors, title: d.visual.title, template: d.visual.template });
@@ -402,7 +408,7 @@ class Director {
         }));
         this.updateReveals();
         if (r.spec.template === "drawing" && r.spec.status === "drawing") {
-          void drawInto(target.id, redraw ?? [], { said: this.saidRecently(), logId: ctx.logId, log: (id, p) => this.patchLog(id, p) });
+          void drawInto(target.id, redraw ?? NOTHING_DRAWN, { said: this.saidRecently(), logId: ctx.logId, log: (id, p) => this.patchLog(id, p) });
         }
         requestAnimationFrame(() =>
           this.patchLog(ctx.logId, {
@@ -474,8 +480,8 @@ class Director {
           }
           store.set((x) => ({ director: { ...x.director, lastShowAt: now() } }));
           // A drawing appears as a placeholder now and draws itself as the artist streams it.
-          if (r.spec.template === "drawing" && r.spec.elements.length === 0) {
-            void drawInto(id, [], { said: this.saidRecently(), logId: ctx.logId, log: (lid, p) => this.patchLog(lid, p) });
+          if (r.spec.template === "drawing" && r.spec.elements.length === 0 && (r.spec.objects ?? []).length === 0) {
+            void drawInto(id, NOTHING_DRAWN, { said: this.saidRecently(), logId: ctx.logId, log: (lid, p) => this.patchLog(lid, p) });
           }
           this.addVisualToBeat(id);
           this.latencyFor.set(id, ctx.logId);

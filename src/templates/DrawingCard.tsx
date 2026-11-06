@@ -1,6 +1,7 @@
 import { motion, useReducedMotion } from "motion/react";
 import { CANVAS, drawingCues, PALETTE, type DrawElement } from "../../shared/drawing";
 import type { RDrawing } from "../../shared/visuals";
+import { Model3D } from "./Model3D";
 import { BUILD_DELAY } from "./motion";
 
 const PROP: Record<string, string> = {
@@ -92,6 +93,10 @@ function DrawEl({ e, index, visible, live, reduce }: { e: DrawElement; index: nu
 
 /** A drawing of anything, made live: a breathing placeholder, then each part draws in as it arrives. */
 export function DrawingCard({ v, reveal }: { v: RDrawing; reveal: number }) {
+  return v.dimension === "3d" ? <Model3D v={v} /> : <Drawing2D v={v} reveal={reveal} />;
+}
+
+function Drawing2D({ v, reveal }: { v: RDrawing; reveal: number }) {
   const reduce = useReducedMotion() ?? false;
   const c = CANVAS[v.aspect];
   const cues = drawingCues(v.elements);

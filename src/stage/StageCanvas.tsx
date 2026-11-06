@@ -4,8 +4,12 @@ import { CHIP_FONT, chipWidth, layoutChips } from "../../shared/chips";
 import { STAGE_W, type Rect } from "../../shared/geometry";
 import type { StageState } from "../../shared/stage";
 import { TemplateIcon } from "../templates/icons";
+import { prefetch3D } from "../templates/Model3D";
 import { EXIT, SPRING } from "../templates/motion";
 import { VisualFrame, type ExitTargets } from "./VisualFrame";
+
+// Both the stage and the control preview render 3D models: have the renderer ready before the first one.
+if (typeof window !== "undefined") prefetch3D();
 
 let measureCtx: CanvasRenderingContext2D | null = null;
 function measureChipText(text: string): number {

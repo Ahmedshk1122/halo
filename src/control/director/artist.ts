@@ -5,6 +5,7 @@
 // their identity, so they don't redraw).
 
 import { parseElement, takeLines, elementLine, type DrawElement } from "../../../shared/drawing";
+import { objectLine, parseSceneLine, type SceneObject, type SceneSettings } from "../../../shared/scene3d";
 import { prepareVisual } from "../../../shared/resolve";
 import type { SpokenNumber } from "../../../shared/spoken";
 import type { DrawingSpec } from "../../../shared/visuals";
@@ -36,8 +37,15 @@ export function cancelDrawing(visualId: string) {
   running.delete(visualId);
 }
 
-/** Streams the artist's drawing into a visual that is on stage (or tucked). */
-export async function drawInto(visualId: string, previous: DrawElement[], opts: DrawOptions): Promise<void> {
+/** What is already drawn, kept on screen while an update streams in. */
+export interface Drawn {
+  elements: DrawElement[];
+  objects: SceneObject[];
+}
+export const NOTHING_DRAWN: Drawn = { elements: [], objects: [] };
+
+/** Streams the artist's drawing (2D) or model (3D) into a visual that is on stage (or tucked). */
+export async function drawInto(visualId: string, drawn: Drawn, opts: DrawOptions): Promise<void> {
   cancelDrawing(visualId);
   const abort = new AbortController();
   running.set(visualId, abort);
@@ -50,18 +58,32 @@ export async function drawInto(visualId: string, previous: DrawElement[], opts: 
   const backing = backingFor(store.get(), { ...v, backdrop: backdrop ?? undefined });
   const behind = !backdrop ? "" : backdrop.busy ? "busy" : backdrop.tone === "light" ? "bright" : "dark";
 
+  const three = spec.dimension === "3d";
+  const previous = drawn.elements;
+  const previousObjects = drawn.objects;
   const started = now();
-  const prevKeys = new Set(previous.map((e) => e.key));
+  const prevKeys = new Set([...previous.map((e) => e.key), ...previousObjects.map((o) => o.key)]);
   const fresh: DrawElement[] = [];
+  const freshObjects: SceneObject[] = [];
+  let scene: SceneSettings | undefined = spec.scene;
   let dirty = false;
   let firstAt = 0;
+
+  // While an update streams, the current drawing stays and new parts join it; when it is done, the new version replaces it.
+  const merge = <T extends { key: string }>(prev: T[], next: T[], done: boolean) =>
+    done && next.length ? next : prev.length ? [...prev, ...next.filter((e) => !prevKeys.has(e.key))] : next;
 
   const apply = (status: "drawing" | "done") => {
     const cur = store.get().visuals[visualId];
     if (!cur || abort.signal.aborted) return;
-    // While an update streams, the current drawing stays and new parts join it.
-    const elements = status === "done" && fresh.length ? fresh : previous.length ? [...previous, ...fresh.filter((e) => !prevKeys.has(e.key))] : fresh;
-    const next: DrawingSpec = { ...(cur.spec as DrawingSpec), elements, status };
+    const done = status === "done";
+    const next: DrawingSpec = {
+      ...(cur.spec as DrawingSpec),
+      elements: three ? [] : merge(previous, fresh, done),
+      objects: three ? merge(previousObjects, freshObjects, done) : [],
+      ...(scene ? { scene } : {}),
+      status,
+    };
     const r = prepareVisual(next, store.get().tables, { said: opts.said });
     if (r.ok) updateVisual(visualId, r.visual, r.spec);
   };
@@ -85,7 +107,8 @@ export async function drawInto(visualId: string, previous: DrawElement[], opts: 
         style: backing.float ? "float" : "card",
         behind,
         said: opts.said.map(sayable),
-        previous: previous.map(elementLine),
+        dimension: three ? "3d" : "2d",
+        previous: three ? previousObjects.map(objectLine) : previous.map(elementLine),
       }),
     });
     if (!res.ok || !res.body) {
@@ -103,6 +126,22 @@ export async function drawInto(visualId: string, previous: DrawElement[], opts: 
       buffer = rest;
       for (const line of lines) {
         const t = line.trim();
+        if (three) {
+          const part = parseSceneLine(t, freshObjects.length);
+          if (part?.kind === "scene") {
+            scene = part.scene;
+            dirty = true;
+            continue;
+          }
+          if (part?.kind === "object") {
+            if (!freshObjects.some((o) => o.key === part.object.key)) {
+              freshObjects.push(part.object);
+              if (!firstAt) firstAt = now();
+              dirty = true;
+            }
+            continue;
+          }
+        }
         if (t.startsWith("{")) {
           try {
             control = { ...control, ...(JSON.parse(t) as typeof control) };
@@ -121,12 +160,14 @@ export async function drawInto(visualId: string, previous: DrawElement[], opts: 
     }
     window.clearInterval(timer);
     if (control.error) throw new Error(control.error);
-    if (fresh.length === 0) throw new Error("the drawing came back empty");
+    if (fresh.length + freshObjects.length === 0) throw new Error("the drawing came back empty");
     apply("done");
     if (opts.logId !== undefined && opts.log) {
       const secs = (ms: number) => `${(ms / 1000).toFixed(1)} s`;
       opts.log(opts.logId, {
-        notes: [`Drawn by ${control.model ?? "the artist"}: first strokes after ${secs(firstAt - started)}, done in ${secs(now() - started)}, ${fresh.length} parts`],
+        notes: [
+          `${three ? "Modelled in 3D" : "Drawn"} by ${control.model ?? "the artist"}: first ${three ? "parts" : "strokes"} after ${secs(firstAt - started)}, done in ${secs(now() - started)}, ${fresh.length + freshObjects.length} parts`,
+        ],
       });
     }
   } catch (err) {

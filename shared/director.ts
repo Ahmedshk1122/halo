@@ -60,6 +60,11 @@ export function specContent(spec: object | null, max = 3000): string {
     if (key === "aliases" || key === "template" || key === "status") return undefined;
     // A drawing is described by its brief; its drawn parts would only flood the context.
     if (key === "elements") return Array.isArray(v) && v.length ? `${v.length} parts drawn from the brief` : undefined;
+    if (key === "objects") {
+      const parts = Array.isArray(v) ? (v as { label?: string; id?: string }[]) : [];
+      return parts.length ? `${parts.length} 3D parts: ${parts.map((p) => p.label || p.id).filter(Boolean).slice(0, 30).join(", ")}` : undefined;
+    }
+    if (key === "scene") return v && typeof v === "object" && (v as { exploded?: boolean }).exploded ? "exploded view" : undefined;
     if (Array.isArray(v)) {
       const a = v.map((x) => prune(x)).filter((x) => x !== undefined);
       return a.length ? a : undefined;
@@ -225,6 +230,7 @@ const style = enm(
 const TEMPLATE_PROPS: Record<TemplateId, Record<string, JsonSchema>> = {
   drawing: {
     caption: str("Short line under the title, or empty."),
+    dimension: enm(["2d", "3d"], "3d for physical things worth seeing from all sides (products, machines, vehicles, devices, buildings, organs, molecules, planets); 2d for maps, tracks, plans, screens, scenes and diagrams."),
     aspect: enm(["wide", "square", "tall"], "Shape of the drawing: wide for scenes, maps, tracks and timelines; square for objects; tall for people, buildings and towers."),
     brief: str(
       "What the illustrator should draw, in detail: the subject and its real shape and layout (as it really looks), the parts to show and label with short words, what to emphasize, where things are, and any numbers the speaker said. For an update: the whole drawing as it should now be, including what is already there.",

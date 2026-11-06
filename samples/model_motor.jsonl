@@ -1,0 +1,23 @@
+{"scene": {"view": "three-quarter", "exploded": false, "turntable": true}}
+{"id": "housing", "shape": "cylinder", "r": 2.2, "h": 5, "pos": [0, 0, 0], "rot": [0, 0, 90], "color": "gray", "material": "metal", "label": "Housing", "explode": [0, 0, 0]}
+{"id": "fin0", "shape": "cylinder", "r": 2.45, "h": 0.14, "pos": [-2.0, 0, 0], "rot": [0, 0, 90], "color": "gray", "material": "metal", "explode": [0, 0, 0]}
+{"id": "fin1", "shape": "cylinder", "r": 2.45, "h": 0.14, "pos": [-1.5, 0, 0], "rot": [0, 0, 90], "color": "gray", "material": "metal", "explode": [0, 0, 0]}
+{"id": "fin2", "shape": "cylinder", "r": 2.45, "h": 0.14, "pos": [-1.0, 0, 0], "rot": [0, 0, 90], "color": "gray", "material": "metal", "explode": [0, 0, 0]}
+{"id": "fin3", "shape": "cylinder", "r": 2.45, "h": 0.14, "pos": [-0.5, 0, 0], "rot": [0, 0, 90], "color": "gray", "material": "metal", "explode": [0, 0, 0]}
+{"id": "fin4", "shape": "cylinder", "r": 2.45, "h": 0.14, "pos": [0, 0, 0], "rot": [0, 0, 90], "color": "gray", "material": "metal", "explode": [0, 0, 0]}
+{"id": "fin5", "shape": "cylinder", "r": 2.45, "h": 0.14, "pos": [0.5, 0, 0], "rot": [0, 0, 90], "color": "gray", "material": "metal", "explode": [0, 0, 0]}
+{"id": "fin6", "shape": "cylinder", "r": 2.45, "h": 0.14, "pos": [1.0, 0, 0], "rot": [0, 0, 90], "color": "gray", "material": "metal", "explode": [0, 0, 0]}
+{"id": "fin7", "shape": "cylinder", "r": 2.45, "h": 0.14, "pos": [1.5, 0, 0], "rot": [0, 0, 90], "color": "gray", "material": "metal", "explode": [0, 0, 0]}
+{"id": "fin8", "shape": "cylinder", "r": 2.45, "h": 0.14, "pos": [2.0, 0, 0], "rot": [0, 0, 90], "color": "gray", "material": "metal", "explode": [0, 0, 0]}
+{"id": "winding-front", "shape": "torus", "r": 1.6, "tube": 0.32, "pos": [2.35, 0, 0], "rot": [0, 90, 0], "color": "orange", "material": "metal", "label": "Windings", "explode": [0, 0, 0]}
+{"id": "winding-back", "shape": "torus", "r": 1.6, "tube": 0.32, "pos": [-2.35, 0, 0], "rot": [0, 90, 0], "color": "orange", "material": "metal", "explode": [0, 0, 0]}
+{"id": "rotor", "shape": "cylinder", "r": 1.45, "h": 4, "pos": [0, 0, 0], "rot": [0, 0, 90], "color": "brown", "material": "metal", "label": "Rotor", "explode": [6, 0, 0], "anim": "spin y 1.6"}
+{"id": "shaft", "shape": "cylinder", "r": 0.32, "h": 9.2, "pos": [0.6, 0, 0], "rot": [0, 0, 90], "color": "white", "material": "metal", "label": "Shaft", "explode": [6, 0, 0], "anim": "spin y 1.6"}
+{"id": "shield-front", "shape": "cylinder", "r": 2.3, "h": 0.45, "pos": [2.75, 0, 0], "rot": [0, 0, 90], "color": "gray", "material": "satin", "label": "End shield", "explode": [3, 0, 0]}
+{"id": "shield-back", "shape": "cylinder", "r": 2.3, "h": 0.45, "pos": [-2.75, 0, 0], "rot": [0, 0, 90], "color": "gray", "material": "satin", "explode": [-3, 0, 0]}
+{"id": "fan-cover", "shape": "cylinder", "r_top": 2.1, "r_bottom": 2.25, "h": 1.1, "pos": [-3.5, 0, 0], "rot": [0, 0, 90], "color": "gray", "material": "matte", "label": "Fan cover", "explode": [-5, 0, 0]}
+{"id": "terminal-box", "shape": "box", "size": [1.6, 1.0, 1.7], "pos": [0.6, 2.55, 0], "rot": [0, 0, 0], "color": "gray", "material": "satin", "label": "Terminal box", "explode": [0, 3, 0]}
+{"id": "foot-a", "shape": "box", "size": [1.1, 0.45, 4.8], "pos": [1.6, -2.45, 0], "rot": [0, 0, 0], "color": "gray", "material": "metal", "label": "Mounting feet", "explode": [0, -2, 0]}
+{"id": "foot-b", "shape": "box", "size": [1.1, 0.45, 4.8], "pos": [-1.6, -2.45, 0], "rot": [0, 0, 0], "color": "gray", "material": "metal", "explode": [0, -2, 0]}
+{"id": "leg-a", "shape": "box", "size": [0.5, 0.9, 2.6], "pos": [1.6, -1.9, 0], "rot": [0, 0, 0], "color": "gray", "material": "metal", "explode": [0, -2, 0]}
+{"id": "leg-b", "shape": "box", "size": [0.5, 0.9, 2.6], "pos": [-1.6, -1.9, 0], "rot": [0, 0, 0], "color": "gray", "material": "metal", "explode": [0, -2, 0]}

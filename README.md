@@ -145,6 +145,8 @@ To use Claude instead, run `npm run key claude` (it sets `HALO_PROVIDER=anthropi
 
 Halo follows your thought, not your words: it decides when you pause or finish a sentence, keeps a running guess of where you're heading (shown as "Expecting: …" in the decision log), waits while a point is forming, and shows the frame of a list as soon as you announce it ("five things"), filling each item as you say it.
 
+Halo shows the thing itself: talk about a product, a motor, an app, a place or a part of the body and it draws it, with its parts labeled, instead of writing bullet points. Physical things can come up as live 3D models that slowly turn, with callouts on the parts; say you want to see inside and the model comes apart into an exploded view. Drawings move when you describe motion: a rotor spins, blood flows, a car follows its line, planets orbit. "Let's move on" clears the screen at once; "take them away" removes everything.
+
 Halo uses two models. The **director** (Haiku, fast) decides on every few words what to show and writes lists, steps and charts. The **artist** (Sonnet 5.5) draws the drawings: the director writes a brief, and the artist draws it line by line while you watch, so the first strokes appear in a few seconds. Drawings happen a few times per talk, so a stronger model costs little there.
 
 ```bash

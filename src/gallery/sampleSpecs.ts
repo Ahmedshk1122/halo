@@ -1,9 +1,21 @@
 // Specs for /gallery. They go through the same resolver and grounding check as
 // the director's output, so a broken sample shows up here first.
 import { parseElement, type DrawElement } from "../../shared/drawing";
+import { DEFAULT_SCENE, parseSceneLine, type SceneObject, type SceneSettings } from "../../shared/scene3d";
 import type { VisualSpec } from "../../shared/visuals";
 import orbitLines from "../../samples/drawing_orbits.svgl?raw";
+import motorLines from "../../samples/model_motor.jsonl?raw";
 import pitchLines from "../../samples/drawing_pitch.svgl?raw";
+
+/** A 3D model as the artist streams it: a scene line, then one part per line. */
+const modelled = (lines: string, exploded = false): { objects: SceneObject[]; scene: SceneSettings } => {
+  const parsed = lines.split("\n").map((l, i) => parseSceneLine(l, i));
+  const scene = parsed.find((p) => p?.kind === "scene");
+  return {
+    objects: parsed.flatMap((p) => (p?.kind === "object" ? [p.object] : [])),
+    scene: { ...(scene?.kind === "scene" ? scene.scene : DEFAULT_SCENE), exploded },
+  };
+};
 
 /** A drawing as the artist streams it: one SVG element per line. */
 const drawn = (lines: string) => lines.split("\n").map(parseElement).filter((e): e is DrawElement => e !== null);
@@ -313,6 +325,38 @@ export const SAMPLE_SPECS: { name: string; spec: VisualSpec; reveal?: number; sa
       aspect: "wide",
       brief: "A football pitch seen from above",
       elements: drawn(pitchLines),
+      status: "done",
+    },
+  },
+  {
+    name: "Model: electric motor",
+    spec: {
+      template: "drawing",
+      title: "Our motor",
+      caption: "",
+      aliases: ["motor"],
+      style: "float",
+      aspect: "square",
+      dimension: "3d",
+      brief: "An electric motor",
+      elements: [],
+      ...modelled(motorLines),
+      status: "done",
+    },
+  },
+  {
+    name: "Model: motor, exploded",
+    spec: {
+      template: "drawing",
+      title: "Inside the motor",
+      caption: "",
+      aliases: ["motor inside"],
+      style: "float",
+      aspect: "wide",
+      dimension: "3d",
+      brief: "An electric motor, exploded",
+      elements: [],
+      ...modelled(motorLines, true),
       status: "done",
     },
   },

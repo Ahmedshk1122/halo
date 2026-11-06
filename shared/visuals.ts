@@ -4,6 +4,7 @@
 // ever render. Templates never see a typed number.
 
 import { drawingCues, type DrawAspect, type DrawElement } from "./drawing";
+import type { SceneObject, SceneSettings } from "./scene3d";
 
 export const TEMPLATE_IDS = [
   "metric",
@@ -361,7 +362,11 @@ export interface DrawingSpec extends SpecBase {
   aspect: DrawAspect;
   /** What to draw, in the director's words: the subject, its real shape, parts to label, what to stress. */
   brief: string;
+  /** 2d: SVG elements. 3d: a model of parts, rendered in 3D. */
+  dimension?: "2d" | "3d";
   elements: DrawElement[];
+  objects?: SceneObject[];
+  scene?: SceneSettings;
   status?: "drawing" | "done";
 }
 
@@ -536,7 +541,10 @@ export interface RDrawing {
   title: string;
   caption: string;
   aspect: DrawAspect;
+  dimension: "2d" | "3d";
   elements: DrawElement[];
+  objects: SceneObject[];
+  scene: SceneSettings;
   /** Nothing drawn yet: the placeholder breathes until the first elements arrive. */
   pending: boolean;
   /** Elements are still streaming in (each animates as it arrives). */
@@ -595,7 +603,7 @@ export function revealCount(v: ResolvedVisual): number {
     case "diagram":
       return v.reveal === "progressive" ? diagramCues(v).length : 0;
     case "drawing":
-      return drawingCues(v.elements).length;
+      return v.dimension === "3d" ? 0 : drawingCues(v.elements).length;
     default:
       return 0;
   }
@@ -613,7 +621,7 @@ export function revealCues(v: ResolvedVisual): string[] {
     case "diagram":
       return diagramCues(v);
     case "drawing":
-      return drawingCues(v.elements);
+      return v.dimension === "3d" ? [] : drawingCues(v.elements);
     default:
       return [];
   }

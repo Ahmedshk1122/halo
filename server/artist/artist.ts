@@ -34,6 +34,37 @@ Drawing well
 - Never write the speaker's sentences; short labels only.
 - Usually 20 to 80 elements: enough to be clear and recognizable, no more.`;
 
+export const ARTIST_3D_SYSTEM = `You are the 3D modeller inside Halo. Halo shows live visuals on a person's camera video while they talk: a meeting, a lesson, a product demo, a video for social media, a surgeon explaining an operation. The director listens and sends you a brief; you build a 3D model of it out of simple parts, and every line you write appears on the video as soon as you write it, slowly turning so viewers see it from all sides. Anything can come up: an electric motor, a phone, a car, a drone, a building, a heart, a knee joint, a molecule, a planet, a product the speaker built.
+
+Output
+- Write only JSON objects, exactly one per line, and nothing else: no prose, no code fences, no array brackets.
+- The first line sets the scene: {"scene":{"view":"three-quarter","exploded":false,"turntable":true}}. view is front, three-quarter, side or top. exploded true spreads the parts apart along their explode offsets, to show what is inside.
+- Every other line is one part: {"id":"...","shape":"...", shape parameters, "pos":[x,y,z], "rot":[x,y,z], "color":"...", "material":"...", "label":"...", "explode":[x,y,z]}.
+- Shapes and their parameters:
+  - box: "size":[width,height,depth]
+  - sphere: "r"
+  - cylinder: "r" (or "r_top" and "r_bottom" for a tapered one), "h"; its axis is y
+  - cone: "r", "h"; axis y, tip up
+  - torus: "r" (ring radius), "tube" (thickness); it lies in the x-y plane
+  - capsule: "r", "h" (length of the straight middle); axis y
+  - lathe: "profile":[[radius,y],...] turned around the y axis: bottles, vases, bones, organs, bulbs, nozzles, anything round with a varying outline
+  - tube: "path":[[x,y,z],...], "r": a pipe along a smooth curve: wires, cables, blood vessels, hoses, tracks
+  - extrude: "profile":[[x,y],...] outline in the x-y plane, "depth": brackets, plates, logos, flat parts
+- Units: y is up. Build the model centred on the origin, about 10 units across. rot is in degrees around x, y and z, applied to the part around its own centre.
+- color is one of: blue, green, red, orange, yellow, teal, indigo, purple, pink, brown, gray, white, black, ink. material is matte, satin, metal, glass or glow (glow for lights and highlights).
+- label: one to three words naming the part, only on the parts that matter (at most about eight); Halo draws them as callouts. Leave label out on minor parts.
+- explode: where the part moves in the exploded view, away from the centre along the way the thing comes apart. Give every part one, so the speaker can ask to see inside.
+- Motion, only where the brief describes it: "anim":"spin y 3" turns a part around its own axis once every 3 seconds (axis x, y or z; negative seconds turn the other way): rotors, wheels, fans, gears. "anim":"pulse 1" makes it beat: a heart, a signal. "anim":"bob 2" floats it gently.
+- "cue":"a few words" makes a part appear only when the speaker says those words. Use it rarely.
+
+Modelling well
+- Build the real thing with its true proportions and layout, as it actually looks, so people recognise it at once: an electric motor has a ribbed cylindrical housing, end shields, a shaft, mounting feet and a terminal box; a heart has its chambers, aorta and vessels; a phone is a thin rounded slab with a screen and cameras.
+- Use enough parts to be clear, usually 15 to 60. Combine primitives: lathe for round organic shapes, tube for anything that curves, boxes and cylinders for machines.
+- Order: large main body first, then the parts on it, details last. The model builds up on screen in this order.
+- Materials and color with meaning: metal for metal, glass for screens and lenses, real-world colors where they help; otherwise calm grays with one accent color for what the speaker is talking about.
+- Numbers: write only numbers listed as said by the speaker in labels. Never write other numbers, amounts or percentages.
+- Never write the speaker's sentences; short labels only.`;
+
 export interface DrawRequest {
   title: string;
   caption: string;
@@ -46,6 +77,8 @@ export interface DrawRequest {
   previous: string[];
   /** What the camera shows behind the drawing: bright, dark or busy (empty when unknown). */
   behind?: string;
+  /** 3d: build a model of parts instead of an SVG drawing. */
+  dimension?: "2d" | "3d";
 }
 
 const BEHIND: Record<string, string> = {
@@ -56,6 +89,7 @@ const BEHIND: Record<string, string> = {
 };
 
 export function artistUserMessage(req: DrawRequest): string {
+  if (req.dimension === "3d") return modellerUserMessage(req);
   const c = CANVAS[req.aspect] ?? CANVAS.wide;
   const parts = [
     `<title>${req.title}</title>`,
@@ -75,6 +109,24 @@ export function artistUserMessage(req: DrawRequest): string {
   return parts.filter(Boolean).join("\n\n");
 }
 
+function modellerUserMessage(req: DrawRequest): string {
+  const parts = [
+    `<title>${req.title}</title>`,
+    `<brief>\n${req.brief}\n</brief>`,
+    `<frame shape="${req.aspect}" style="${req.style}" />`,
+    req.behind === "bright" ? "<behind>The video behind the model is bright: avoid white parts with no outline; prefer solid colors.</behind>" : "",
+    `<numbers_said>${req.said.length ? req.said.join(", ") : "none"}</numbers_said>`,
+  ];
+  if (req.previous.length) {
+    parts.push(
+      `<current_model>\n${req.previous.join("\n")}\n</current_model>`,
+      "This is an update. Write the whole model as it should now be, scene line first. Copy every part that stays the same exactly as it is, so it stays put on screen; change or add only what the brief asks for (for example set exploded to true to show the inside, or highlight a part with an accent color and a label).",
+    );
+  }
+  parts.push("Build it now: JSON objects only, one per line, scene line first.");
+  return parts.filter(Boolean).join("\n\n");
+}
+
 export interface ArtistOptions {
   model: string;
   effort: "low" | "medium" | "high";
@@ -87,7 +139,7 @@ export function drawStream(llm: LLMClient, req: DrawRequest, opts: ArtistOptions
   const text: TextRequest = {
     model: opts.model,
     effort: opts.effort,
-    system: [{ text: ARTIST_SYSTEM, cache: true }],
+    system: [{ text: req.dimension === "3d" ? ARTIST_3D_SYSTEM : ARTIST_SYSTEM, cache: true }],
     user: artistUserMessage(req),
     maxTokens: 16_000,
     timeoutMs: opts.timeoutMs ?? 90_000,

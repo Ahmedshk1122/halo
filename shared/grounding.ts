@@ -223,6 +223,7 @@ export function textFields(spec: VisualSpec): { field: string; text: string }[] 
     case "drawing":
       push("caption", spec.caption);
       spec.elements.forEach((e, i) => e.tag === "text" && push(`elements[${i}]`, e.text));
+      (spec.objects ?? []).forEach((o, i) => push(`objects[${i}].label`, o.label));
       break;
     case "statement":
       push("kicker", spec.kicker);

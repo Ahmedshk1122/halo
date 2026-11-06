@@ -77,6 +77,7 @@ app.post("/api/draw", async (c) => {
     said: Array.isArray(body.said) ? body.said.map(String).slice(0, 40) : [],
     previous: Array.isArray(body.previous) ? body.previous.map(String).slice(0, 600) : [],
     behind: typeof body.behind === "string" ? body.behind : "",
+    dimension: body.dimension === "3d" ? "3d" : "2d",
   };
   const started = performance.now();
   c.header("Content-Type", "text/plain; charset=utf-8");

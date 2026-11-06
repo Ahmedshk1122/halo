@@ -704,3 +704,40 @@
   from { background-position: 120% 0; }
   to { background-position: -120% 0; }
 }
+
+/* 3D model: a transparent WebGL canvas with callouts on the sides */
+.tpl-model-host,
+.tpl-model-host canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+.tpl-model-leaders {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+.tpl-model-leader {
+  fill: none;
+  stroke: var(--label-2);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.tpl-model-dot {
+  fill: var(--label);
+}
+.tpl-model-labels {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.tpl-model-label {
+  position: absolute;
+  transform: translateY(-50%);
+  font: 600 24px var(--font-system);
+  color: var(--label);
+  white-space: nowrap;
+  transition: opacity 0.3s ease;
+}

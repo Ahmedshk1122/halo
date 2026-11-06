@@ -4,6 +4,7 @@
 
 import { formatDelta, formatLabel, formatValue, normalizeName, type DataColumn, type DataTable } from "./data";
 import { elementLine, parseElement, type DrawElement } from "./drawing";
+import { DEFAULT_SCENE, sanitizeObject, sanitizeScene, type SceneObject } from "./scene3d";
 import { scanSpec, scrubNumbers, type GroundingViolation } from "./grounding";
 import { wasSaid, type SpokenNumber } from "./spoken";
 import type {
@@ -342,6 +343,12 @@ export function tidySpec(spec: VisualSpec): VisualSpec {
           .map((e) => (e && typeof e === "object" ? parseElement(elementLine({ ...e, attrs: record(e.attrs) as Record<string, string>, text: tidy(e.text ?? "", 60) })) : null))
           .filter((e): e is DrawElement => e !== null)
           .slice(0, 600),
+        dimension: spec.dimension === "3d" ? "3d" : "2d",
+        objects: list<SceneObject>(spec.objects)
+          .map((o, i) => sanitizeObject({ ...(o as unknown as Record<string, unknown>), label: tidy((o as SceneObject).label ?? "", 28) }, i))
+          .filter((o): o is SceneObject => o !== null)
+          .slice(0, 400),
+        scene: spec.scene ? sanitizeScene(spec.scene as unknown as Record<string, unknown>) : DEFAULT_SCENE,
         status: spec.status === "drawing" ? "drawing" : "done",
       };
   }
@@ -481,7 +488,7 @@ function checkShape(spec: VisualSpec): string[] {
       if (spec.regions.length + spec.nodes.length + spec.paths.length + spec.markers.length === 0) errors.push("diagram needs at least one part");
       break;
     case "drawing":
-      if (spec.status !== "drawing" && spec.elements.length === 0) errors.push("the drawing came back empty");
+      if (spec.status !== "drawing" && spec.elements.length === 0 && (spec.objects ?? []).length === 0) errors.push("the drawing came back empty");
       break;
     default:
       break;
@@ -663,8 +670,11 @@ function resolve(spec: VisualSpec, tables: DataTable[], said: SpokenNumber[], no
         title: spec.title,
         caption: spec.caption,
         aspect: spec.aspect,
+        dimension: spec.dimension ?? "2d",
         elements: spec.elements,
-        pending: spec.status === "drawing" && spec.elements.length === 0,
+        objects: spec.objects ?? [],
+        scene: spec.scene ?? DEFAULT_SCENE,
+        pending: spec.status === "drawing" && spec.elements.length === 0 && (spec.objects ?? []).length === 0,
         live: spec.status === "drawing",
         accent: "blue",
       };
