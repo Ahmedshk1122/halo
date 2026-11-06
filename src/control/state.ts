@@ -83,6 +83,8 @@ export interface DecisionEntry {
   errors?: string[];
   /** What Halo fixed on the way (numbers taken out, a line left out). */
   notes?: string[];
+  /** What the director expected the speaker to say next, at this decision. */
+  forecast?: string;
   speechEndAt: number;
   requestMs?: number;
   modelMs?: number;
@@ -140,7 +142,8 @@ export interface ControlState {
   transcript: TranscriptEntry[];
   interim: { text: string; at: number; label?: string } | null;
   decisions: DecisionEntry[];
-  arc: { summary: string; beat: string; beats: BeatEntry[] };
+  /** forecast: where the director expects the speaker to go next (its working memory). */
+  arc: { summary: string; beat: string; beats: BeatEntry[]; forecast?: string };
   director: {
     provider: "claude" | "replay";
     proactivity: Proactivity;

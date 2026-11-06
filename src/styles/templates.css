@@ -168,6 +168,18 @@
   gap: 2px;
   min-width: 0;
 }
+/* Announced items not said yet: quiet placeholders. */
+.tpl-icon-tile.is-slot {
+  background: var(--fill-2);
+}
+.tpl-strategy-slot-line {
+  flex: 1;
+  max-width: 60%;
+  height: 14px;
+  border-radius: 7px;
+  background: var(--fill-2);
+}
+
 /* Long lists: compact rows, then two columns filled top to bottom. */
 .tpl-strategy.is-compact .tpl-strategy-points {
   gap: 14px;

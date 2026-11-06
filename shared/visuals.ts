@@ -200,6 +200,8 @@ export interface StrategySpec extends SpecBase {
   template: "strategy";
   reveal: RevealMode;
   points: StrategyPoint[];
+  /** How many points the speaker announced ("five things"); empty slots wait for the rest. 0 if unknown. */
+  expected?: number;
 }
 
 export interface RoadmapItem {
@@ -478,6 +480,8 @@ export interface RStrategy {
   title: string;
   reveal: RevealMode;
   points: StrategyPoint[];
+  /** Slots shown in total: the announced count, or the points so far if more. */
+  expected: number;
   accent: Accent;
 }
 

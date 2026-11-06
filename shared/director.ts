@@ -108,10 +108,16 @@ export interface DirectorRequest {
   request: string | null;
   /** The presenter held a pointing finger on a spot while speaking. */
   pointing?: boolean;
+  /** The director's own forecast from its last decision. */
+  forecast?: string;
+  /** Seconds since the last word was heard; 0 while still talking. */
+  pauseSec?: number;
 }
 
 export interface DirectorDecision {
   action: DirectorAction;
+  /** Where the speaker is heading and what visual will fit; carried into the next request. */
+  forecast: string;
   reason: string;
   beat: string;
   arc: string;
@@ -257,6 +263,7 @@ const TEMPLATE_PROPS: Record<TemplateId, Record<string, JsonSchema>> = {
   },
   strategy: {
     reveal,
+    expected: num("How many points the speaker announced (five things: 5), or 0 if they did not say. Halo shows an empty slot for each point still to come."),
     points: arr(obj({ icon, text: str("Two to six words."), detail: str("Optional short line, or empty."), cue }), "Every point the presenter has said so far, in the order spoken. No limit: long lists are laid out to fit."),
   },
   roadmap: {
@@ -417,6 +424,9 @@ export const TEMPLATE_FOR_TOOL: Record<string, TemplateId> = Object.fromEntries(
 );
 
 const COMMON = {
+  forecast: str(
+    "Where the speaker's thought is heading: what they are setting up, what they will most likely say next, and the visual that will fit the whole thought once they get there. One or two short sentences; Halo gives it back to you next time.",
+  ),
   reason: str("A few words for the speaker's private log: why this, now."),
   beat: str("Two to four words naming what they are talking about now."),
   arc: str("Running summary of everything said so far, at most two sentences, updated with what was just said."),
@@ -495,7 +505,7 @@ function s(v: unknown): string {
 
 /** Rebuilds a visual spec from a show_ or prepare_ tool input. */
 export function specFromToolInput(template: TemplateId, input: Record<string, unknown>): VisualSpec {
-  const { reason: _r, beat: _b, arc: _a, replace_id: _ri, tuck_ids: _t, prepared_id: _p, when: _w, ...rest } = input;
+  const { forecast: _f, reason: _r, beat: _b, arc: _a, replace_id: _ri, tuck_ids: _t, prepared_id: _p, when: _w, ...rest } = input;
   // A drawing starts as a brief; the artist fills in its elements as it draws.
   const drawing = template === "drawing" ? { elements: [], status: "drawing" } : {};
   return { ...rest, ...drawing, template, title: s(input.title), aliases: strArray(input.aliases) } as unknown as VisualSpec;
@@ -503,7 +513,7 @@ export function specFromToolInput(template: TemplateId, input: Record<string, un
 
 /** Maps one tool call to a decision. Unknown tools become "none". */
 export function toolCallToDecision(name: string, input: Record<string, unknown>): DirectorDecision {
-  const base = { reason: s(input.reason), beat: s(input.beat), arc: s(input.arc), targetIds: [], tuckIds: [], preparedId: "", visual: null };
+  const base = { forecast: s(input.forecast), reason: s(input.reason), beat: s(input.beat), arc: s(input.arc), targetIds: [], tuckIds: [], preparedId: "", visual: null };
   const template = TEMPLATE_FOR_TOOL[name];
   if (template) {
     const replaceId = s(input.replace_id).trim();
@@ -526,6 +536,6 @@ export function toolCallToDecision(name: string, input: Record<string, unknown>)
   return { ...base, action: "none", reason: base.reason || `Unknown tool ${name}` };
 }
 
-export function noneDecision(reason: string, prev?: { beat: string; arc: string }): DirectorDecision {
-  return { action: "none", reason, beat: prev?.beat ?? "", arc: prev?.arc ?? "", targetIds: [], tuckIds: [], preparedId: "", visual: null };
+export function noneDecision(reason: string, prev?: { beat: string; arc: string; forecast?: string }): DirectorDecision {
+  return { action: "none", forecast: prev?.forecast ?? "", reason, beat: prev?.beat ?? "", arc: prev?.arc ?? "", targetIds: [], tuckIds: [], preparedId: "", visual: null };
 }

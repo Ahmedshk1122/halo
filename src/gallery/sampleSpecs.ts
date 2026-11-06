@@ -345,6 +345,20 @@ export const SAMPLE_SPECS: { name: string; spec: VisualSpec; reveal?: number; sa
     },
   },
   {
+    name: "List: five announced, two said",
+    spec: {
+      template: "strategy",
+      title: "Five things I love here",
+      aliases: [],
+      reveal: "all",
+      expected: 5,
+      points: [
+        { icon: "trees", text: "The parks", detail: "", cue: "" },
+        { icon: "cable-car", text: "Cable cars", detail: "", cue: "" },
+      ],
+    },
+  },
+  {
     name: "List: ten reasons",
     spec: {
       template: "strategy",

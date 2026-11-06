@@ -7,7 +7,8 @@ import { SPRING_SOFT } from "./motion";
 /** A title and any number of points, each with an icon. Points build in as they are said; long lists go compact, then two columns. */
 export function StrategyCard({ v, reveal }: { v: RStrategy; reveal: number }) {
   const shown = v.reveal === "all" ? v.points.length : reveal;
-  const layout = strategyLayout(v.points.length);
+  const slots = Math.max(v.points.length, v.expected ?? 0);
+  const layout = strategyLayout(slots);
   return (
     <div
       className={`tpl tpl-strategy${layout.compact ? " is-compact" : ""}${layout.columns === 2 ? " is-cols-2" : ""}`}
@@ -39,6 +40,20 @@ export function StrategyCard({ v, reveal }: { v: RStrategy; reveal: number }) {
             </motion.li>
           );
         })}
+        {Array.from({ length: slots - v.points.length }, (_, k) => (
+          // Announced but not said yet: a quiet slot the next point will fill.
+          <motion.li
+            key={`slot-${v.points.length + k}`}
+            className="tpl-strategy-point is-slot"
+            aria-hidden
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={SPRING_SOFT}
+          >
+            <span className="tpl-icon-tile is-slot" />
+            <span className="tpl-strategy-slot-line" />
+          </motion.li>
+        ))}
       </ol>
     </div>
   );

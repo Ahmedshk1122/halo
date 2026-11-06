@@ -51,6 +51,8 @@ export const config = {
   directorEffort: effort(env("HALO_DIRECTOR_EFFORT"), "low"),
   plannerEffort: effort(env("HALO_PLANNER_EFFORT"), "medium"),
   artistEffort: effort(env("HALO_ARTIST_EFFORT"), "low"),
+  /** The director may think briefly before each decision (better judgment, a little slower). off: answer at once. */
+  directorThinking: env("HALO_DIRECTOR_THINKING").toLowerCase() !== "off",
   /** How long one director decision may take before Halo gives up on it. */
   directorTimeoutMs: Number(env("HALO_DIRECTOR_TIMEOUT_MS") || 12_000),
 };

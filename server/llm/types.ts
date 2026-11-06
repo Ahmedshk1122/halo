@@ -10,6 +10,8 @@ export interface ToolCallRequest {
   tools: ToolDef[];
   /** Require exactly one tool call (director), allow several (planner), or only warm the cache. */
   mode: "one" | "many" | "warm";
+  /** Let the model think before it picks a tool (no forced tool call), trading a little time for judgment. */
+  think?: boolean;
   maxTokens: number;
   timeoutMs: number;
 }

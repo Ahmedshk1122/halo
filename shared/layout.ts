@@ -81,7 +81,8 @@ export function templateSize(v: ResolvedVisual): Size {
       return { w: 1120, h: 14 + 22 + TITLE_LINE + 18 + 26 + BODY_LINE + (hasValue ? 8 + 96 + 6 : 0) + 18 + rows * 44 - 9 + 26 + 14 };
     }
     case "strategy": {
-      const { compact, columns, rows } = strategyLayout(v.points.length);
+      const slots = Math.max(v.points.length, v.expected ?? 0);
+      const { compact, columns, rows } = strategyLayout(slots);
       const w = columns === 2 ? 1080 : 600;
       const colW = columns === 2 ? (w - PAD * 2 - 32) / 2 : w - PAD * 2;
       const tile = compact ? 48 : 64;
@@ -92,6 +93,8 @@ export function templateSize(v: ResolvedVisual): Size {
         const detailLines = !compact && p.detail ? estimateLines(p.detail, 24, textW) : 0;
         return Math.max(tile, lines * BODY_LINE + detailLines * 30 + 4);
       });
+      // Empty slots for items still to come are one row each.
+      for (let i = v.points.length; i < slots; i++) rowH.push(tile);
       // Two columns fill top to bottom, then the second column; the taller column sets the height.
       const colHeights = Array.from({ length: columns }, (_, c) => rowH.slice(c * rows, (c + 1) * rows).reduce((a, b) => a + b + gap, 0));
       return { w, h: PAD + TITLE_LINE + 26 + Math.max(0, ...colHeights) - gap + PAD };

@@ -13,6 +13,8 @@ export interface DirectorOptions {
   effort: "low" | "medium" | "high";
   /** How long a decision may take; it is no use to the presenter after that. */
   timeoutMs?: number;
+  /** Let the model think before choosing (no forced tool call). */
+  think?: boolean;
 }
 
 const TOOLS = directorTools();
@@ -30,6 +32,7 @@ export async function decide(llm: LLMClient, req: DirectorRequest, opts: Directo
     user: userMessage(req),
     tools: TOOLS,
     mode: "one",
+    think: opts.think,
     // Room for a full diagram; a cut-off tool call would be dropped.
     maxTokens: 4096,
     timeoutMs: opts.timeoutMs ?? 12_000,
@@ -40,11 +43,12 @@ export async function decide(llm: LLMClient, req: DirectorRequest, opts: Directo
     ? toolCallToDecision(call.name, call.input)
     : noneDecision(
         result.stopReason === "refusal" ? "The model declined this request" : "No tool call came back, so nothing changes",
-        { beat: req.beat, arc: req.arc },
+        { beat: req.beat, arc: req.arc, forecast: req.forecast },
       );
   // Keep the arc and beat if the model left them empty.
   if (!decision.arc) decision.arc = req.arc;
   if (!decision.beat) decision.beat = req.beat;
+  if (!decision.forecast) decision.forecast = req.forecast ?? "";
 
   return {
     decision,

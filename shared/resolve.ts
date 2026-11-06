@@ -282,6 +282,7 @@ export function tidySpec(spec: VisualSpec): VisualSpec {
           .slice(0, MAX_ITEMS)
           .map((p) => ({ ...p, icon: iconName(p.icon), text: tidy(p.text, 52), detail: tidy(p.detail, 64), cue: cue(p.cue) }))
           .filter((p) => p.text),
+        expected: Math.max(0, Math.min(MAX_ITEMS, Math.round(Number(spec.expected) || 0))),
       };
     case "roadmap":
       return {
@@ -455,7 +456,8 @@ function checkShape(spec: VisualSpec): string[] {
   if (!spec.title) errors.push("missing title");
   switch (spec.template) {
     case "strategy":
-      if (spec.points.length < 1) errors.push("strategy needs 1 to 4 points");
+      // An announced list can show its frame before the first item is said.
+      if (spec.points.length < 1 && !(spec.expected && spec.expected > 0)) errors.push("a list needs at least one point");
       break;
     case "roadmap":
       if (spec.items.length < 1) errors.push("roadmap needs 1 to 6 items");
@@ -619,7 +621,7 @@ function resolve(spec: VisualSpec, tables: DataTable[], said: SpokenNumber[], no
       return { template: "comparison", title: spec.title, a: side(spec.a), b: side(spec.b), favor: spec.favor, accent: "blue" };
     }
     case "strategy":
-      return { template: "strategy", title: spec.title, reveal: spec.reveal, points: spec.points, accent: "blue" };
+      return { template: "strategy", title: spec.title, reveal: spec.reveal, points: spec.points, expected: Math.max(spec.points.length, spec.expected ?? 0), accent: "blue" };
     case "roadmap":
       return { template: "roadmap", title: spec.title, reveal: spec.reveal, items: spec.items, accent: "blue" };
     case "process":

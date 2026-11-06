@@ -91,7 +91,8 @@ export class AnthropicLLM implements LLMClient {
   }
 
   private async send(req: ToolCallRequest, strict: Set<string>): Promise<ToolCallResult> {
-    const forced = req.mode === "one" && !NO_FORCED_TOOL_CHOICE.test(req.model);
+    // A forced tool call makes some models (Haiku 5.5) skip thinking; think lets them reason first.
+    const forced = req.mode === "one" && !req.think && !NO_FORCED_TOOL_CHOICE.test(req.model);
     const fallback = FALLBACK_DEFAULT.test(req.model);
     const started = performance.now();
 

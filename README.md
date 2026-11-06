@@ -143,6 +143,8 @@ npm run key gemini
 
 To use Claude instead, run `npm run key claude` (it sets `HALO_PROVIDER=anthropic`).
 
+Halo follows your thought, not your words: it decides when you pause or finish a sentence, keeps a running guess of where you're heading (shown as "Expecting: …" in the decision log), waits while a point is forming, and shows the frame of a list as soon as you announce it ("five things"), filling each item as you say it.
+
 Halo uses two models. The **director** (Haiku, fast) decides on every few words what to show and writes lists, steps and charts. The **artist** (Sonnet 5.5) draws the drawings: the director writes a brief, and the artist draws it line by line while you watch, so the first strokes appear in a few seconds. Drawings happen a few times per talk, so a stronger model costs little there.
 
 ```bash

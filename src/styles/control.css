@@ -659,6 +659,13 @@ body.is-control {
   font-size: 11px;
   color: var(--ctl-red);
 }
+.decision-forecast {
+  display: block;
+  margin: 2px 0 0;
+  font-size: 11px;
+  font-style: italic;
+  color: var(--ctl-label-2);
+}
 .decision-note {
   margin: 4px 0 0;
   font-size: 11px;

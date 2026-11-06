@@ -1,5 +1,6 @@
-// The director loop. Triggers on each final speech segment, and when the
-// interim transcript grows by about 6 words without a final. Only one request
+// The director loop. Decides when a thought lands: on each final speech segment,
+// when the speaker pauses or ends a sentence mid-stream, and every ~20 words
+// of uninterrupted speech. Only one request
 // is in flight; speech that arrives meanwhile is merged into the next request.
 // Decisions are grounded (data references resolved, text scanned) before
 // anything reaches the stage.
@@ -31,7 +32,12 @@ import { cancelAllDrawings, drawInto } from "./artist";
 import { ServerDirector, type DirectorProvider } from "./providers";
 
 export const TRANSCRIPT_WINDOW_SEC = 60;
-export const INTERIM_TRIGGER_WORDS = 6;
+/** No new words for this long counts as a pause: decide then, not mid-phrase. */
+export const PAUSE_MS = 650;
+/** A long run without a pause still gets a decision this often. */
+export const INTERIM_TRIGGER_WORDS = 20;
+/** Interim text ending a sentence (recognizers that punctuate, and rehearsal). */
+const SENTENCE_END = /[.?!]["')\]]?$/;
 /** Gap between new visuals. Only quiet holds visuals back; balanced and eager show them as soon as they help. */
 export const SPACING_SEC: Record<Proactivity, number> = { quiet: 8, balanced: 0, eager: 0 };
 /** Director visuals: items already said are revealed by this time even if cues were paraphrased. */
@@ -68,6 +74,9 @@ class Director {
   /** Transcript entries with a larger id are "just said". */
   private decidedThrough = 0;
   private interimWordsAtTrigger = 0;
+  private pauseTimer = 0;
+  /** When the last word was heard, for telling the director whether the speaker is mid-sentence. */
+  private lastSpeechAt = 0;
   private nextTranscriptId = 1;
   private nextDecisionId = 1;
   private deferred: { timer: number; logId: number } | null = null;
@@ -128,14 +137,25 @@ class Director {
 
   /** Feed speech directly (used by tests and the typed-input fallback). */
   onSpeech(e: SpeechEvent) {
+    this.lastSpeechAt = e.at;
+    window.clearTimeout(this.pauseTimer);
     if (e.type === "interim") {
       store.set({ interim: { text: e.text, at: e.at, label: e.label } });
       this.updateReveals();
       const interimTriggers = this.limits.interimTriggers || this.provider.name === "replay";
-      if (interimTriggers && wordCount(e.text) - this.interimWordsAtTrigger >= INTERIM_TRIGGER_WORDS) {
-        this.interimWordsAtTrigger = wordCount(e.text);
+      if (!interimTriggers) return;
+      const words = wordCount(e.text);
+      const fresh = words - this.interimWordsAtTrigger;
+      const fire = () => {
+        this.interimWordsAtTrigger = words;
         this.schedule({ trigger: "interim", speechEndAt: e.at, request: null });
+      };
+      // Decide when a thought lands (a sentence ends, or the speaker pauses), not mid-phrase.
+      if (fresh >= INTERIM_TRIGGER_WORDS || (fresh >= 3 && SENTENCE_END.test(e.text.trim()))) {
+        fire();
+        return;
       }
+      if (fresh >= 2) this.pauseTimer = window.setTimeout(fire, PAUSE_MS);
       return;
     }
     const id = this.nextTranscriptId++;
@@ -241,7 +261,7 @@ class Director {
     });
     const s = store.get();
     this.apply(
-      { action: "show", reason, beat: s.arc.beat, arc: s.arc.summary, targetIds: [], tuckIds: [], preparedId: id, visual: null },
+      { action: "show", forecast: s.arc.forecast ?? "", reason, beat: s.arc.beat, arc: s.arc.summary, targetIds: [], tuckIds: [], preparedId: id, visual: null },
       { logId, speechEndAt: from?.speechEndAt ?? t, explicit: true, cueFrom: (from?.speechEndAt ?? t) - 15_000, speechStart: (from?.speechEndAt ?? t) - 5_000 },
     );
   }
@@ -301,6 +321,8 @@ class Director {
       proactivity: s.director.proactivity,
       request,
       pointing: steadyPoint(firstNew - 1000, t) !== null,
+      forecast: s.arc.forecast ?? "",
+      pauseSec: s.interim && t - this.lastSpeechAt < 400 ? 0 : Math.max(0, (t - this.lastSpeechAt) / 1000),
     };
     const newThrough = recent.length ? recent[recent.length - 1].id : this.decidedThrough;
     return { req, newThrough, said, label, cueFrom: firstNew - 15_000 };
@@ -327,7 +349,7 @@ class Director {
   private apply(d: DirectorDecision, ctx: { logId: number; speechEndAt: number; explicit: boolean; cueFrom: number; speechStart: number }) {
     this.updateArc(d);
     const s = store.get();
-    const base = { action: d.action, reason: d.reason, beat: d.beat };
+    const base = { action: d.action, reason: d.reason, beat: d.beat, ...(d.forecast ? { forecast: d.forecast } : {}) };
 
     switch (d.action) {
       case "none":
@@ -661,7 +683,7 @@ class Director {
     store.set((s) => {
       const beat = d.beat.trim() || s.arc.beat;
       const beats = beat && beat.toLowerCase() !== s.arc.beat.toLowerCase() ? [...s.arc.beats, { name: beat, at: now(), visualIds: [] }] : s.arc.beats;
-      return { arc: { summary: d.arc.trim() || s.arc.summary, beat, beats } };
+      return { arc: { summary: d.arc.trim() || s.arc.summary, beat, beats, forecast: d.forecast.trim() || s.arc.forecast } };
     });
   }
 
@@ -692,6 +714,7 @@ class Director {
     cancelAllDrawings();
     this.pending = null;
     window.clearTimeout(this.waitTimer);
+    window.clearTimeout(this.pauseTimer);
     this.waitTimer = 0;
     this.decidedThrough = 0;
     this.interimWordsAtTrigger = 0;
@@ -701,7 +724,7 @@ class Director {
       transcript: [],
       interim: null,
       decisions: [],
-      arc: { summary: "", beat: "", beats: [] },
+      arc: { summary: "", beat: "", beats: [], forecast: "" },
       director: { ...s.director, lastShowAt: null },
       visuals: {},
       onStage: [],

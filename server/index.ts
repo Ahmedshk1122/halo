@@ -19,7 +19,7 @@ const llm = makeClient(config.provider);
 /** Draws: the same client unless drawings come from another provider. */
 const artistLLM = config.artistProvider === config.provider ? llm : makeClient(config.artistProvider);
 const noKey = `${keyName[config.provider]} is not set in .env. Run: npm run key ${config.provider === "anthropic" ? "claude" : "gemini"}`;
-const directorOpts = { model: active.directorModel, effort: config.directorEffort, timeoutMs: config.directorTimeoutMs };
+const directorOpts = { model: active.directorModel, effort: config.directorEffort, timeoutMs: config.directorTimeoutMs, think: config.directorThinking };
 
 app.get("/api/health", (c) =>
   c.json({

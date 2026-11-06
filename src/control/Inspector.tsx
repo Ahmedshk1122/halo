@@ -119,6 +119,7 @@ export function logText(entries: DecisionEntry[]): string {
       const lines = [parts.join(" · ")];
       if (d.said) lines.push(`  said: ${d.said}`);
       if (d.reason) lines.push(`  reason: ${d.reason}`);
+      if (d.forecast) lines.push(`  expecting: ${d.forecast}`);
       for (const e of d.errors ?? []) lines.push(`  error: ${e}`);
       for (const n of d.notes ?? []) lines.push(`  note: ${n}`);
       return lines.join("\n");
@@ -172,6 +173,7 @@ function DecisionsView() {
         d.outcome === "none" && d.action === "none" ? (
           <article key={d.id} className="decision is-quiet" data-action="none">
             <span className="decision-quiet-reason">{d.reason || "Nothing on screen changes"}</span>
+            {d.forecast && <span className="decision-forecast">Expecting: {d.forecast}</span>}
             <span className="decision-meta">
               {clock(d.at)}
               {d.label && ` · ${d.label}`}
@@ -188,6 +190,7 @@ function DecisionsView() {
             {d.template && <span className="muted">{TEMPLATE_LABELS[d.template]}</span>}
           </header>
           {d.reason && <p className="decision-reason">{d.reason}</p>}
+          {d.forecast && <p className="decision-forecast">Expecting: {d.forecast}</p>}
           {d.errors?.map((e) => (
             <p key={e} className="decision-error">
               {e}

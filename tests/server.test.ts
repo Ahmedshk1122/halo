@@ -171,3 +171,47 @@ describe("artist", async () => {
     expect(msg).toContain("character for character");
   });
 });
+
+describe("following the thought", async () => {
+  const { userMessage, DIRECTOR_SYSTEM } = await import("../server/director/prompt");
+  const { directorTools } = await import("../shared/director");
+
+  it("gives the director its last forecast and whether the speaker is mid-sentence", () => {
+    const msg = userMessage({ ...request, forecast: "Setting up a goal; waiting for the target.", pauseSec: 0 });
+    expect(msg).toContain("<your_forecast");
+    expect(msg).toContain("waiting for the target");
+    expect(msg).toContain("still talking");
+    expect(userMessage({ ...request, pauseSec: 1.2 })).toContain("paused 1.2 s ago");
+  });
+
+  it("asks for a forecast on every tool and for the announced length of a list", () => {
+    for (const t of directorTools()) expect(Object.keys((t.input_schema as { properties: object }).properties)).toContain("forecast");
+    const list = directorTools().find((t) => t.name === "show_list")!;
+    expect(Object.keys((list.input_schema as { properties: object }).properties)).toContain("expected");
+    expect(DIRECTOR_SYSTEM).toContain("Follow the thought, not the words");
+  });
+
+  it("lets the model think before choosing when asked", async () => {
+    const llm = new FakeLLM({ calls: [{ name: "act", input: { action: "none", forecast: "Five things coming", reason: "", beat: "", arc: "", target_ids: [] } }] });
+    const res = await decide(llm, request, { model: "claude-haiku-5-5", effort: "low", think: true });
+    expect(llm.last?.think).toBe(true);
+    expect(res.decision.forecast).toBe("Five things coming");
+  });
+});
+
+describe("director thinking", async () => {
+  const { AnthropicLLM } = await import("../server/llm/anthropic");
+  const { directorTools } = await import("../shared/director");
+  it("drops the forced tool call when the director may think", async () => {
+    const bodies: { tool_choice: { type: string } }[] = [];
+    const create = (async (body: unknown) => {
+      bodies.push(body as (typeof bodies)[number]);
+      return { id: "m", type: "message", role: "assistant", model: "claude-haiku-5-5", stop_reason: "tool_use", content: [], usage: { input_tokens: 1, output_tokens: 1 } };
+    }) as unknown as ConstructorParameters<typeof AnthropicLLM>[1];
+    const llm = new AnthropicLLM("sk-ant-test", create);
+    const req: ToolCallRequest = { model: "claude-haiku-5-5", effort: "low", system: [{ text: "x", cache: true }], user: "hi", tools: directorTools(), mode: "one", maxTokens: 100, timeoutMs: 1000 };
+    await llm.callTools(req);
+    await llm.callTools({ ...req, think: true });
+    expect(bodies.map((b) => b.tool_choice.type)).toEqual(["any", "auto"]);
+  });
+});
