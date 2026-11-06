@@ -56,3 +56,20 @@ describe("drawing visuals", () => {
     expect(prepareVisual({ ...base, status: "done" }, []).ok).toBe(false);
   });
 });
+
+describe("motion in drawings", () => {
+  it("accepts calm, whitelisted motion", () => {
+    expect(parseElement('<circle cx="0" cy="0" r="8" fill="blue" data-anim="move 6 M100 100 A80 80 0 1 1 260 100"/>')?.anim).toBe("move 6 M100 100 A80 80 0 1 1 260 100");
+    expect(parseElement('<rect x="0" y="0" width="10" height="40" fill="gray" data-anim="spin -3 5 20"/>')?.anim).toBe("spin -3 5 20");
+    expect(parseElement('<path d="M0 0 L100 0" stroke="red" data-anim="flow 2"/>')?.anim).toBe("flow 2");
+    expect(parseElement('<circle cx="5" cy="5" r="5" data-anim="pulse 0.1"/>')?.anim).toBe("pulse 0.4");
+  });
+  it("drops motion it cannot check", () => {
+    expect(parseElement('<circle cx="5" cy="5" r="5" data-anim="move 3 javascript:alert(1)"/>')?.anim).toBeUndefined();
+    expect(parseElement('<circle cx="5" cy="5" r="5" data-anim="wobble 2"/>')?.anim).toBeUndefined();
+  });
+  it("keeps motion through a redraw", () => {
+    const e = parseElement('<circle cx="0" cy="0" r="8" fill="blue" data-anim="move 6 M10 10 L20 20"/>')!;
+    expect(parseElement(elementLine(e))).toEqual(e);
+  });
+});

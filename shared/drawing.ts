@@ -51,8 +51,31 @@ export interface DrawElement {
   text: string;
   /** Words the speaker says when this part should appear; empty shows it at once. */
   cue: string;
+  /**
+   * Motion, already checked: "spin <s> <cx> <cy>" turns around a point (negative s: the
+   * other way), "flow <s>" runs dashes along a stroke, "pulse <s>" breathes, and
+   * "move <s> <path data>" travels along a path (the element is drawn around 0,0).
+   */
+  anim?: string;
   /** Stable identity for animation: same element, same key, no replay. */
   key: string;
+}
+
+const NUM = "-?\\d+(?:\\.\\d+)?";
+const clampDur = (v: string) => {
+  const n = Number(v);
+  const sign = n < 0 ? -1 : 1;
+  return String(sign * Math.min(60, Math.max(0.4, Math.abs(n))));
+};
+
+/** Checks a data-anim value; returns it normalized, or null. */
+export function cleanAnim(value: string): string | null {
+  const t = value.trim().replace(/\s+/g, " ");
+  let m: RegExpMatchArray | null;
+  if ((m = t.match(new RegExp(`^spin (${NUM}) (${NUM}) (${NUM})$`)))) return `spin ${clampDur(m[1])} ${m[2]} ${m[3]}`;
+  if ((m = t.match(new RegExp(`^(flow|pulse) (${NUM})$`)))) return `${m[1]} ${clampDur(m[2]).replace("-", "")}`;
+  if ((m = t.match(new RegExp(`^move (${NUM}) (.+)$`))) && PATH_DATA.test(m[2]) && /^[Mm]/.test(m[2].trim())) return `move ${clampDur(m[1]).replace("-", "")} ${m[2].trim()}`;
+  return null;
 }
 
 const NUMERIC = new Set(["x", "y", "width", "height", "rx", "ry", "cx", "cy", "r", "x1", "y1", "x2", "y2", "stroke-width", "opacity", "fill-opacity", "stroke-opacity", "font-size"]);
@@ -138,11 +161,16 @@ export function parseElement(line: string): DrawElement | null {
   if (!TAGS.includes(tag)) return null;
   const attrs: Record<string, string> = {};
   let cue = "";
+  let anim = "";
   for (const a of m[2].matchAll(ATTR)) {
     const name = a[1].toLowerCase();
     const value = unescape(a[3] ?? a[4] ?? "");
     if (name === "data-cue") {
       cue = value.trim().slice(0, 40);
+      continue;
+    }
+    if (name === "data-anim") {
+      anim = cleanAnim(value) ?? "";
       continue;
     }
     const clean = cleanAttr(tag, name, value);
@@ -153,7 +181,7 @@ export function parseElement(line: string): DrawElement | null {
   if (tag === "path" && !attrs.d) return null;
   if ((tag === "polyline" || tag === "polygon") && !attrs.points) return null;
   if (tag === "text" && !attrs["font-size"]) attrs["font-size"] = String(MIN_FONT + 4);
-  return { tag, attrs, text, cue, key: hash(`${tag}|${JSON.stringify(attrs)}|${text}`) };
+  return { tag, attrs, text, cue, ...(anim ? { anim } : {}), key: hash(`${tag}|${JSON.stringify(attrs)}|${text}|${anim}`) };
 }
 
 /** Splits streamed text into complete lines; returns the parsed elements and the unfinished rest. */
@@ -168,7 +196,7 @@ export function elementLine(e: DrawElement): string {
   const attrs = Object.entries(e.attrs)
     .map(([k, v]) => `${k}="${v.replace(/"/g, "&quot;")}"`)
     .join(" ");
-  const cue = e.cue ? ` data-cue="${e.cue.replace(/"/g, "&quot;")}"` : "";
+  const cue = (e.cue ? ` data-cue="${e.cue.replace(/"/g, "&quot;")}"` : "") + (e.anim ? ` data-anim="${e.anim}"` : "");
   return e.tag === "text" ? `<text ${attrs}${cue}>${e.text.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</text>` : `<${e.tag} ${attrs}${cue}/>`;
 }
 

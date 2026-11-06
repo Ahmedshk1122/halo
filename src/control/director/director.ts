@@ -27,7 +27,7 @@ import {
 } from "../stageActions";
 import { onStageRendered } from "../stageSync";
 import { store, type ControlState, type DecisionEntry, type DecisionTrigger, type VisualInstance } from "../state";
-import { allVisuals, matchPrepared, matchVisual, parseCommand, type ParsedCommand } from "./commands";
+import { ALL, allVisuals, matchPrepared, matchVisual, parseCommand, type ParsedCommand } from "./commands";
 import { cancelAllDrawings, drawInto } from "./artist";
 import { ServerDirector, type DirectorProvider } from "./providers";
 
@@ -601,9 +601,33 @@ class Director {
         this.request(`${c.query}`);
         return true;
       }
+      case "moveon": {
+        // Put everything away now; the director still hears the line and picks what comes next.
+        const ids = [...s.onStage];
+        if (ids.length === 0) return false;
+        this.cancelDeferred();
+        ids.forEach(tuckVisual);
+        mark("moved on");
+        this.log({ ...logBase, action: "tuck", outcome: "applied", reason: "You moved on, so Halo put the visuals away", onScreenMs: Math.round(now() - e.at) });
+        return false;
+      }
       case "hide":
       case "remove": {
         const onScreen = s.onStage.map((id) => s.visuals[id]).filter(Boolean);
+        if (c.query === ALL) {
+          if (onScreen.length === 0) return p.addressed;
+          this.cancelDeferred();
+          onScreen.forEach((v) => (c.kind === "hide" ? tuckVisual(v.id) : dismissVisual(v.id)));
+          mark(c.kind === "hide" ? "tuck all" : "remove all");
+          this.log({
+            ...logBase,
+            action: c.kind === "hide" ? "tuck" : "clear",
+            outcome: "applied",
+            reason: c.kind === "hide" ? "You asked to put them all away" : "You asked to remove them all",
+            onScreenMs: Math.round(now() - e.at),
+          });
+          return true;
+        }
         // "that"/"it"/"the chart" mean the visual most recently put on screen.
         const named = c.query ? matchVisual(c.query, onScreen) : null;
         const latest = [...onScreen].sort((a, b) => b.shownAt - a.shownAt)[0];

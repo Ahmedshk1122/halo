@@ -2,6 +2,7 @@
 // the director's output, so a broken sample shows up here first.
 import { parseElement, type DrawElement } from "../../shared/drawing";
 import type { VisualSpec } from "../../shared/visuals";
+import orbitLines from "../../samples/drawing_orbits.svgl?raw";
 import pitchLines from "../../samples/drawing_pitch.svgl?raw";
 
 /** A drawing as the artist streams it: one SVG element per line. */
@@ -312,6 +313,20 @@ export const SAMPLE_SPECS: { name: string; spec: VisualSpec; reveal?: number; sa
       aspect: "wide",
       brief: "A football pitch seen from above",
       elements: drawn(pitchLines),
+      status: "done",
+    },
+  },
+  {
+    name: "Drawing: planets in motion",
+    spec: {
+      template: "drawing",
+      title: "The inner planets",
+      caption: "",
+      aliases: ["orbits"],
+      style: "float",
+      aspect: "wide",
+      brief: "The inner planets orbiting the sun",
+      elements: drawn(orbitLines),
       status: "done",
     },
   },

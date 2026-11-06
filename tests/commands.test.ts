@@ -50,3 +50,19 @@ describe("matchVisual", () => {
     expect(matchVisual("pricing", visuals)).toBeNull();
   });
 });
+
+describe("clearing quickly", async () => {
+  const { parseCommand, ALL } = await import("../src/control/director/commands");
+  it("removes every visual for plural references", () => {
+    expect(parseCommand("take them away")?.command).toEqual({ kind: "hide", query: ALL });
+    expect(parseCommand("ok take both away")?.command).toEqual({ kind: "hide", query: ALL });
+    expect(parseCommand("get rid of everything")?.command).toEqual({ kind: "remove", query: ALL });
+    expect(parseCommand("clear them all")?.command).toEqual({ kind: "clear" });
+    expect(parseCommand("take it away")?.command).toEqual({ kind: "hide", query: "" });
+  });
+  it("puts things away when the speaker moves on, without catching ordinary speech", () => {
+    expect(parseCommand("Okay, let's move on to our product.")?.command).toEqual({ kind: "moveon" });
+    expect(parseCommand("switching gears, the motor")?.command).toEqual({ kind: "moveon" });
+    expect(parseCommand("we need to move fast on this")).toBeNull();
+  });
+});

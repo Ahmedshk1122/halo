@@ -44,12 +44,35 @@ function propsOf(e: DrawElement): Record<string, string | number> {
   return out;
 }
 
+/** Continuous motion as SVG animation, so it keeps running on the stage without script. */
+function Motion({ anim, props }: { anim: string; props: Record<string, string | number> }) {
+  const [kind, dur, ...rest] = anim.split(" ");
+  const secs = Math.abs(Number(dur));
+  if (kind === "spin") {
+    const [cx, cy] = rest;
+    const turn = Number(dur) < 0 ? -360 : 360;
+    return <animateTransform attributeName="transform" type="rotate" from={`0 ${cx} ${cy}`} to={`${turn} ${cx} ${cy}`} dur={`${secs}s`} repeatCount="indefinite" additive="sum" />;
+  }
+  if (kind === "flow") {
+    const period = String(props.strokeDasharray ?? "14 12")
+      .split(/[\s,]+/)
+      .map(Number)
+      .reduce((a, b) => a + (Number.isFinite(b) ? b : 0), 0);
+    return <animate attributeName="stroke-dashoffset" from="0" to={String(-(period || 26))} dur={`${secs}s`} repeatCount="indefinite" />;
+  }
+  if (kind === "pulse") return <animate attributeName="opacity" values="1;0.45;1" dur={`${secs}s`} repeatCount="indefinite" />;
+  if (kind === "move") return <animateMotion path={rest.join(" ")} dur={`${secs}s`} repeatCount="indefinite" rotate="auto" />;
+  return null;
+}
+
 function DrawEl({ e, index, visible, live, reduce }: { e: DrawElement; index: number; visible: boolean; live: boolean; reduce: boolean }) {
   const Tag = MOTION[e.tag];
   const props = propsOf(e);
+  if (e.anim?.startsWith("flow") && props.strokeDasharray === undefined) props.strokeDasharray = "14 12";
   // Drawn while streaming: each part animates as it arrives. Finished drawings build in order.
   const delay = live ? 0 : BUILD_DELAY + Math.min(index * 0.025, 1.1);
-  const stroked = e.tag !== "text" && props.fill === "none";
+  // Flowing dashes run on the stroke itself, so they fade in instead of drawing on.
+  const stroked = e.tag !== "text" && props.fill === "none" && !e.anim?.startsWith("flow");
   const initial = reduce ? { opacity: 0 } : stroked ? { pathLength: 0, opacity: 0 } : { opacity: 0, y: e.tag === "text" ? 6 : 0 };
   const shown = stroked && !reduce ? { pathLength: 1, opacity: 1 } : { opacity: 1, y: 0 };
   const hidden = stroked && !reduce ? { pathLength: 0, opacity: 0 } : { opacity: 0, y: 0 };
@@ -62,6 +85,7 @@ function DrawEl({ e, index, visible, live, reduce }: { e: DrawElement; index: nu
       transition={{ duration: stroked ? 0.7 : 0.45, ease: [0.33, 0, 0.2, 1], delay }}
     >
       {e.tag === "text" ? e.text : null}
+      {e.anim && !reduce ? <Motion anim={e.anim} props={props} /> : null}
     </Tag>
   );
 }

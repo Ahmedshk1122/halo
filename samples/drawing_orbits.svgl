@@ -1,0 +1,19 @@
+<circle cx="150" cy="165" r="34" fill="yellow"/>
+<circle cx="150" cy="165" r="44" fill="yellow" fill-opacity="0.25" data-anim="pulse 3"/>
+<circle cx="150" cy="165" r="62" fill="none" stroke="ink-3" stroke-width="2" stroke-dasharray="3 7"/>
+<circle cx="150" cy="165" r="88" fill="none" stroke="ink-3" stroke-width="2" stroke-dasharray="3 7"/>
+<circle cx="150" cy="165" r="118" fill="none" stroke="ink-3" stroke-width="2" stroke-dasharray="3 7"/>
+<circle cx="150" cy="165" r="148" fill="none" stroke="ink-3" stroke-width="2" stroke-dasharray="3 7"/>
+<circle cx="0" cy="0" r="6" fill="gray" data-anim="move 3 M88 165 A62 62 0 1 1 212 165 A62 62 0 1 1 88 165"/>
+<circle cx="0" cy="0" r="10" fill="orange" data-anim="move 5 M62 165 A88 88 0 1 1 238 165 A88 88 0 1 1 62 165"/>
+<circle cx="0" cy="0" r="11" fill="blue" data-anim="move 7 M32 165 A118 118 0 1 1 268 165 A118 118 0 1 1 32 165"/>
+<circle cx="0" cy="0" r="8" fill="red" data-anim="move 11 M2 165 A148 148 0 1 1 298 165 A148 148 0 1 1 2 165"/>
+<circle cx="352" cy="101" r="8" fill="gray"/>
+<text x="372" y="110" font-size="28" font-weight="500" fill="ink">Mercury</text>
+<circle cx="352" cy="145" r="8" fill="orange"/>
+<text x="372" y="154" font-size="28" font-weight="500" fill="ink">Venus</text>
+<circle cx="352" cy="189" r="8" fill="blue"/>
+<text x="372" y="198" font-size="28" font-weight="500" fill="ink">Earth</text>
+<circle cx="352" cy="233" r="8" fill="red"/>
+<text x="372" y="242" font-size="28" font-weight="500" fill="ink">Mars</text>
+<text x="150" y="175" font-size="28" font-weight="600" text-anchor="middle" fill="black">Sun</text>

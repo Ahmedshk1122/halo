@@ -14,6 +14,12 @@ Output
 - Colors are names only: ${PALETTE_NAMES.join(", ")}. ink, ink-2 and ink-3 are text and line colors that stay readable on the background; fill and fill-2 are soft neutral areas.
 - Order: large background shapes first, then the main subject, then details, labels last. The drawing builds up on screen in this order.
 - data-cue="a few words" on an element makes it appear only when the speaker says those words. Use it rarely, only when the brief asks for a step-by-step reveal.
+- Motion, when the brief describes something moving or happening, with data-anim on the element:
+  - data-anim="spin S CX CY" turns it around the point CX,CY once every S seconds (negative S turns the other way): rotors, wheels, gears, fans.
+  - data-anim="flow S" runs dashes along a stroked line: blood, current, water, air, traffic, data. Give the line a stroke-dasharray.
+  - data-anim="pulse S" makes it breathe: a heartbeat, a signal, a highlight.
+  - data-anim="move S PATH" sends it along PATH once every S seconds, facing its direction: a car on a track, a planet in orbit, a blood cell. Draw that element around 0,0 (for example a circle at cx="0" cy="0"), and use path data in canvas coordinates.
+  Use motion only where the speaker describes it, and keep it calm.
 
 Drawing well
 - Draw the real thing. Use its true shape, proportions and layout as it actually looks: a football pitch is about 105 by 68 with penalty areas, goal areas, a centre circle and goals; a stadium has its stands around the pitch; a circuit has its real sequence of corners and straights; planets have their order and relative sizes. When you are unsure of exact details, draw the characteristic shape that people recognize.

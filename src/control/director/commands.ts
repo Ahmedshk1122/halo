@@ -15,7 +15,12 @@ export type Command =
   | { kind: "remove"; query: string }
   | { kind: "expand"; query: string }
   | { kind: "collapse"; query: string }
-  | { kind: "next" };
+  | { kind: "next" }
+  /** "Let's move on": tuck everything now; the director still hears the line and picks what's next. */
+  | { kind: "moveon" };
+
+/** Query meaning every visual on screen ("them", "both", "these", "everything"). */
+export const ALL = "*";
 
 export interface ParsedCommand {
   command: Command;
@@ -32,18 +37,27 @@ const NATURAL_BACK =
 // Removing without the wake word, for speed: "take that away", "get rid of the chart",
 // "remove that". Only a reference to a visual counts ("that", "it", "the chart"),
 // so "we need to remove friction" stays ordinary speech.
+const REF = "that|this|it|those|these|them|them both|both|both of them|all of them|all of these|everything|all|the [a-z][a-z\\s-]{0,30}?";
 const NATURAL_REMOVE: { re: RegExp; kind: "hide" | "remove" | "clear" }[] = [
-  { re: /\b(?:clear|wipe) (?:the screen|the stage|everything|it all)\b/i, kind: "clear" },
-  { re: /\bget rid of (that|this|it|those|them|everything|the [a-z][a-z\s-]{0,30}?)\s*(?:[.,!?;]|$|\bplease\b)/i, kind: "remove" },
-  { re: /\b(?:remove|delete|close|dismiss) (that|this|it|those|them|the [a-z][a-z\s-]{0,30}?)\s*(?:[.,!?;]|$|\bplease\b)/i, kind: "remove" },
-  { re: /\b(?:take|put|move) (that|this|it|those|them|the [a-z][a-z\s-]{0,30}?) (?:away|off|aside|down)\b/i, kind: "hide" },
-  { re: /\b(?:hide|tuck) (that|this|it|those|them|the [a-z][a-z\s-]{0,30}?)\s*(?:[.,!?;]|$|\bplease\b|\baway\b)/i, kind: "hide" },
+  { re: /\b(?:clear|wipe) (?:the screen|the stage|everything|it all|all of (?:it|them)|them all)\b/i, kind: "clear" },
+  { re: new RegExp(`\\bget rid of (${REF})\\s*(?:[.,!?;]|$|\\bplease\\b)`, "i"), kind: "remove" },
+  { re: new RegExp(`\\b(?:remove|delete|close|dismiss) (${REF})\\s*(?:[.,!?;]|$|\\bplease\\b)`, "i"), kind: "remove" },
+  { re: new RegExp(`\\b(?:take|put|move) (${REF}) (?:away|off|aside|down)\\b`, "i"), kind: "hide" },
+  { re: new RegExp(`\\b(?:hide|tuck) (${REF})\\s*(?:[.,!?;]|$|\\bplease\\b|\\baway\\b)`, "i"), kind: "hide" },
 ];
+
+// Clear transitions to something new: put everything away at once, then let the director choose.
+const MOVE_ON =
+  /\b(?:let'?s |let us |we'?ll |i'?ll |i want to |now,? |okay,? |ok,? |so,? )*(?:move on|moving on|switch gears|switching gears|change (?:the )?(?:topic|subject|gears)|on ?to something (?:else|different)|next topic|a new topic|a different topic|something completely different)\b/i;
 
 const clean = (s: string) => s.replace(/[.,!?;:]+$/g, "").trim();
 /** "hide that" / "expand the chart" refer to the current visual, not a named one. */
-const deictic = (q: string | undefined) =>
-  !q || /^(?:the |that |this )?(that|this|it|them|those|these|everything|all|chart|graph|visual|card|slide|thing|one|diagram|picture|image)$/.test(q.trim()) ? "" : q;
+const deictic = (q: string | undefined) => {
+  const t = (q ?? "").trim().toLowerCase();
+  // Plural or "all": every visual on screen.
+  if (/^(?:them|them both|both|both of them|those|these|all|all of them|all of these|everything|the (?:charts|visuals|cards|graphs|drawings|pictures))$/.test(t)) return ALL;
+  return !t || /^(?:the |that |this )?(that|this|it|chart|graph|visual|card|slide|thing|one|diagram|picture|image|drawing|list)$/.test(t) ? "" : q ?? "";
+};
 
 export function parseCommand(text: string): ParsedCommand | null {
   const wake = text.match(WAKE);
@@ -54,6 +68,7 @@ export function parseCommand(text: string): ParsedCommand | null {
   }
   const natural = text.match(NATURAL_BACK);
   if (natural) return { command: { kind: "recall", query: clean(natural[1]) }, addressed: false, text };
+  if (MOVE_ON.test(text)) return { command: { kind: "moveon" }, addressed: false, text };
   for (const { re, kind } of NATURAL_REMOVE) {
     const m = text.match(re);
     if (!m) continue;
